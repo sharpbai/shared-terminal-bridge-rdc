@@ -1,0 +1,51 @@
+# v0.1 端到端验收记录
+
+日期：2026-09-22  
+环境：ChatGPT + Remote Desktop Commander + Shared Terminal Bridge 0.14.0 + tmux verify33
+
+## 结论
+
+v0.1 核心链路验收通过。RDC 负责 ChatGPT 到本机的远程连接，Adapter 只把稳定、机器可读的调用转发给现有 STB；HumanEventLayer、Execution Lease、Job tracking 和 tmux 控制仍由 STB 提供。
+
+## 已验证
+
+- RDC → stb-rdc → STB daemon 正常。
+- context 可读取托管 session verify33 的状态和有界终端内容。
+- 显式 acquire_execution 返回 generation。
+- send 经 terminal_submit 写入同一共享 pane，并生成 STB job。
+- job 能识别正常 prompt return 为 COMPLETED。
+- wait 可作为 RDC blocking call；Human Ctrl+C 后无需新的 ChatGPT 消息即可唤醒当前调用。
+- Human Ctrl+C 被权威识别为 INTERRUPTED_BY_HUMAN。
+- Human interrupt 后 execution lease 变为 REVOKED。
+- 使用旧 generation 再次 send 返回 EXECUTION_LEASE_INVALID，命令未进入终端。
+- recommended_action 在 Human interrupt 后为 STOP_CURRENT_TURN。
+
+## 实测关键结果
+
+正常命令：
+- generation: 14
+- command: printf 'STB_RDC_V01_OK\\n'
+- result: COMPLETED
+- evidence: STB_RDC_V01_OK + prompt
+
+Human Override：
+- command: ping 127.0.0.1
+- result: INTERRUPTED_BY_HUMAN
+- lease generation 14: REVOKED
+- stale write: EXECUTION_LEASE_INVALID
+
+Blocking wait：
+- generation: 16
+- command: sleep 120
+- Human Ctrl+C 后约 7.8 秒内返回
+- state: INTERRUPTED_BY_HUMAN
+- completion_confidence: authoritative
+- recommended_action: STOP_CURRENT_TURN
+
+## 验收中修复
+
+初版 Adapter 将 terminal_submit 参数写成 command；STB API 实际参数名为 text。已修正并重新通过提交、job 和 Human Override 验证。
+
+## v0.1 安全边界
+
+Adapter 不直接调用 tmux，不复制 HumanEventLayer，不实现自己的 lease。AI 写入必须携带 STB generation。Human Override 的强制性来自本地 STB，而不是依赖模型自觉停止。

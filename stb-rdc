@@ -1,0 +1,37 @@
+#!/usr/bin/env python3
+import argparse,json,pathlib,socket,sys
+SOCKET=pathlib.Path("/tmp/shared-terminal-bridge.sock")
+def call(method,params=None):
+ c=socket.socket(socket.AF_UNIX,socket.SOCK_STREAM)
+ try:
+  c.connect(str(SOCKET)); w=c.makefile("w",encoding="utf-8"); r=c.makefile("r",encoding="utf-8")
+  w.write(json.dumps({"method":method,"params":params or {}})+"\n"); w.flush(); line=r.readline(); c.close()
+ except OSError as e: raise RuntimeError(f"STB unavailable: {e}")
+ if not line: raise RuntimeError("STB returned empty response")
+ x=json.loads(line)
+ if not x.get("ok"): raise RuntimeError(json.dumps(x.get("error"),ensure_ascii=False))
+ return x["result"]
+def session(name):
+ for s in call("terminal_session_list").get("sessions",[]):
+  if s["name"]==name:return s
+ raise RuntimeError(f"managed session not found: {name}")
+def main():
+ ap=argparse.ArgumentParser(); sp=ap.add_subparsers(dest="cmd",required=True); sp.add_parser("status")
+ p=sp.add_parser("context");p.add_argument("session");p.add_argument("--lines",type=int,default=80)
+ p=sp.add_parser("lease");p.add_argument("session")
+ p=sp.add_parser("send");p.add_argument("session");p.add_argument("generation",type=int);p.add_argument("text")
+ p=sp.add_parser("wait");p.add_argument("job_id");p.add_argument("--seconds",type=int,default=60)
+ p=sp.add_parser("job");p.add_argument("job_id")
+ p=sp.add_parser("interrupt");p.add_argument("job_id"); a=ap.parse_args()
+ if a.cmd=="status": out={"bridge":call("bridge_info"),"sessions":call("terminal_session_list").get("sessions",[])}
+ elif a.cmd=="context":
+  s=session(a.session);out={"session":s,"state":call("terminal_state",{"pane":s["pane"]}),"terminal":call("terminal_read",{"pane":s["pane"],"lines":a.lines})}
+ elif a.cmd=="lease": s=session(a.session);out=call("acquire_execution",{"pane":s["pane"]})
+ elif a.cmd=="send": s=session(a.session);out=call("terminal_submit",{"pane":s["pane"],"generation":a.generation,"text":a.text})
+ elif a.cmd=="wait": out=call("terminal_wait_job",{"job_id":a.job_id,"wait_ms":a.seconds*1000})
+ elif a.cmd=="job": out=call("terminal_job_status",{"job_id":a.job_id})
+ else:
+  j=call("terminal_job_status",{"job_id":a.job_id});out=call("terminal_interrupt",{"pane":j["pane"],"generation":j["generation"]})
+ print(json.dumps(out,ensure_ascii=False,indent=2))
+try: main()
+except RuntimeError as e: print(json.dumps({"ok":False,"error":str(e)},ensure_ascii=False),file=sys.stderr);sys.exit(1)
