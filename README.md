@@ -163,3 +163,24 @@ Human Ctrl+C = revoke the current Agent execution authority
 当前版本为 `0.2.3`，已经在 ChatGPT + RDC + STB + `verify33` 的真实链路上验证：正常提交、job/wait、人工 `Ctrl+C`、lease revoke、stale generation 拒绝，以及 blocking wait 被 Human Event 唤醒。
 
 STB-RDC 仍是薄 Adapter：它不复制 STB 的 Human Event Layer，不实现独立 lease，也不直接操作 tmux。后续演进应继续优先增强宿主 capability filtering、结构化错误和更稳定的远程工具协议，而不是把安全逻辑搬到 Adapter 中。
+
+## 安装命令到 PATH
+
+STB-RDC 不应只作为仓库内脚本使用。为了让新的 ChatGPT/RDC 会话在任意工作目录都能直接执行 `stb-rdc`，需要把入口安装到当前用户的 `PATH` 中。
+
+当前推荐安装方式：
+
+```bash
+chmod +x /Users/sharpbai/Documents/ChatGPT/IT网管/shared-terminal-bridge-rdc/stb-rdc
+mkdir -p ~/bin
+ln -sfn /Users/sharpbai/Documents/ChatGPT/IT网管/shared-terminal-bridge-rdc/stb-rdc ~/bin/stb-rdc
+```
+
+并确认 `~/bin` 已在 `PATH` 中：
+
+```bash
+command -v stb-rdc
+stb-rdc status
+```
+
+如果 `command -v stb-rdc` 没有返回路径，需要先把安装目录加入 shell 的 `PATH`。RDC 调用环境也必须能解析到同一个命令，否则新会话可能出现 `stb-rdc: command not found`。

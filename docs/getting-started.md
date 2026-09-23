@@ -187,3 +187,22 @@ bootstrap SESSION
 ### `wait` 返回但 job 仍在运行
 
 这是正常的观察窗口超时。使用 `job` 获取当前证据；只有明显超过合理预期时，才比较替代方案并请人工决定是否中断。
+
+## 安装 `stb-rdc` 命令
+
+为了让 RDC 在任意工作目录下都能直接调用 Adapter，建议把仓库中的 `stb-rdc` 安装到用户 `PATH` 中，而不是依赖 `python3 ./stb-rdc` 或仓库绝对路径。
+
+```bash
+chmod +x /Users/sharpbai/Documents/ChatGPT/IT网管/shared-terminal-bridge-rdc/stb-rdc
+mkdir -p ~/bin
+ln -sfn /Users/sharpbai/Documents/ChatGPT/IT网管/shared-terminal-bridge-rdc/stb-rdc ~/bin/stb-rdc
+```
+
+验证：
+
+```bash
+command -v stb-rdc
+stb-rdc status
+```
+
+若 `command -v stb-rdc` 无输出，请先确保 `~/bin` 已加入当前 shell 和 RDC 进程使用的 `PATH`。新 ChatGPT 会话出现 `stb-rdc: command not found` 时，应优先检查这一点。
