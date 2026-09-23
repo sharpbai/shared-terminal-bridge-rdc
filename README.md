@@ -6,6 +6,10 @@
 
 STB-RDC 是 Remote Desktop Commander（RDC）到 [Shared Terminal Bridge](https://github.com/sharpbai/shared-terminal-bridge) 的薄适配层。RDC 负责找到设备并建立远程调用通道；真正的终端观察和执行仍通过目标机器上的 STB 与 tmux 完成。
 
+![ChatGPT 通过 RDC 和 STB 清理远程磁盘](assets/readme-demo/stb-rdc-disk-cleanup-demo.gif)
+
+上面的演示以远程磁盘清理为例：ChatGPT 通过 RDC 连接实体机器，使用 `stb-rdc` 发现 `verify33` 托管会话；STB 先提供只读上下文，人工批准后才授予 execution lease。命令在远程 tmux pane 中可见执行，长任务由目标机器本地等待，结果或 Human Override 再沿 RDC 返回 ChatGPT。
+
 ## STB 与 STB-RDC 怎么选
 
 | 对比项 | STB | STB-RDC |
@@ -20,10 +24,6 @@ STB-RDC 是 Remote Desktop Commander（RDC）到 [Shared Terminal Bridge](https:
 两者不是互相替代的两套终端系统，而是共享同一个 STB 执行核心的不同 Agent 入口：需要开发能力和本机深度操作时使用 Codex + STB；需要从任意设备发起日常操作、延续 ChatGPT 上下文时使用 ChatGPT + RDC + STB-RDC。
 
 > **额度说明：**“接近可持续调用”描述的是本项目当前账户和实际使用方式下的体验，不代表无限额度或固定套餐承诺。ChatGPT 与 Codex 的额度、工具可用性和限流规则可能随账户方案及产品策略变化。
-
-![ChatGPT 通过 RDC 和 STB 清理远程磁盘](assets/readme-demo/stb-rdc-disk-cleanup-demo.gif)
-
-上面的演示以远程磁盘清理为例：ChatGPT 通过 RDC 连接实体机器，使用 `stb-rdc` 发现 `verify33` 托管会话；STB 先提供只读上下文，人工批准后才授予 execution lease。命令在远程 tmux pane 中可见执行，长任务由目标机器本地等待，结果或 Human Override 再沿 RDC 返回 ChatGPT。
 
 ## 背景：为什么封装 RDC 工具
 
