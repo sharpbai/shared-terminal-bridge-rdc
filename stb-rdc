@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
+"""Thin ChatGPT/RDC adapter for Shared Terminal Bridge."""
 import argparse,json,pathlib,socket,sys
 SOCKET=pathlib.Path("/tmp/shared-terminal-bridge.sock")
+ADAPTER_VERSION="0.2.3"
+
 def call(method,params=None):
  c=socket.socket(socket.AF_UNIX,socket.SOCK_STREAM)
  try:
@@ -11,21 +14,68 @@ def call(method,params=None):
  x=json.loads(line)
  if not x.get("ok"): raise RuntimeError(json.dumps(x.get("error"),ensure_ascii=False))
  return x["result"]
+
 def session(name):
  for s in call("terminal_session_list").get("sessions",[]):
   if s["name"]==name:return s
  raise RuntimeError(f"managed session not found: {name}")
+
+def policy():
+ return {
+  "human_primary":True,
+  "bootstrap_first":True,
+  "bootstrap_is_discovery_only":True,
+  "execution_path_required":"RDC -> stb-rdc -> STB -> tmux",
+  "direct_rdc_shell_execution_forbidden":True,
+  "direct_tmux_send_keys_forbidden":True,
+  "execution_requires_lease":True,
+  "human_interrupt_action":"STOP_CURRENT_TURN",
+  "revoked_generation_policy":"DENY",
+  "wait_timeout_is_job_failure":False,
+  "wait_timeout_guidance":"A wait timeout only ends this observation window. Re-check the job; do not interrupt a still-running job solely because wait timed out."
+ }
+
+def compact_terminal(raw):
+ content=raw.get("content",""); lines=[x.rstrip() for x in content.splitlines()]
+ while lines and not lines[-1]: lines.pop()
+ while lines and not lines[0]: lines.pop(0)
+ return {"content":"\n".join(lines),"execution":raw.get("execution",{}),"truncated":raw.get("truncated",False)}
+
+def bootstrap(name,lines=40):
+ info=call("bridge_info"); s=session(name)
+ state=call("terminal_state",{"pane":s["pane"]})
+ terminal=compact_terminal(call("terminal_read",{"pane":s["pane"],"lines":lines}))
+ return {
+  "adapter":{"name":"stb-rdc","version":ADAPTER_VERSION},
+  "bridge":{"name":info.get("name"),"version":info.get("version"),"api_version":info.get("api_version")},
+  "session":s,"terminal_state":state,"context":terminal,
+  "interaction_policy":policy(),
+  "bootstrap_result":{
+   "ready":True,
+   "task_executed":False,
+   "discovery_only":True,
+   "next_step":"For terminal work, continue only through stb-rdc commands. Do not run the user's terminal task directly with Remote Desktop Commander shell/process tools and do not call tmux send-keys directly."
+  },
+  "workflow":{
+   "cold_start":"bootstrap discovery only -> plan",
+   "execute":"lease -> send -> job/wait",
+   "on_human_interrupt":"stop current turn; do not reacquire or continue without new human authorization"
+  }
+ }
+
 def main():
- ap=argparse.ArgumentParser(); sp=ap.add_subparsers(dest="cmd",required=True); sp.add_parser("status")
- p=sp.add_parser("context");p.add_argument("session");p.add_argument("--lines",type=int,default=80)
+ ap=argparse.ArgumentParser(description=__doc__);sp=ap.add_subparsers(dest="cmd",required=True);sp.add_parser("status")
+ p=sp.add_parser("bootstrap");p.add_argument("session");p.add_argument("--lines",type=int,default=40)
+ p=sp.add_parser("context");p.add_argument("session");p.add_argument("--lines",type=int,default=40)
  p=sp.add_parser("lease");p.add_argument("session")
  p=sp.add_parser("send");p.add_argument("session");p.add_argument("generation",type=int);p.add_argument("text")
  p=sp.add_parser("wait");p.add_argument("job_id");p.add_argument("--seconds",type=int,default=60)
  p=sp.add_parser("job");p.add_argument("job_id")
- p=sp.add_parser("interrupt");p.add_argument("job_id"); a=ap.parse_args()
- if a.cmd=="status": out={"bridge":call("bridge_info"),"sessions":call("terminal_session_list").get("sessions",[])}
+ p=sp.add_parser("interrupt");p.add_argument("job_id");a=ap.parse_args()
+ if a.cmd=="status": out={"adapter_version":ADAPTER_VERSION,"bridge":call("bridge_info"),"sessions":call("terminal_session_list").get("sessions",[]),"interaction_policy":policy()}
+ elif a.cmd=="bootstrap": out=bootstrap(a.session,a.lines)
  elif a.cmd=="context":
-  s=session(a.session);out={"session":s,"state":call("terminal_state",{"pane":s["pane"]}),"terminal":call("terminal_read",{"pane":s["pane"],"lines":a.lines})}
+  s=session(a.session);out={"session":s,"state":call("terminal_state",{"pane":s["pane"]}),"terminal":compact_terminal(call("terminal_read",{"pane":s["pane"],"lines":a.lines}))}
  elif a.cmd=="lease": s=session(a.session);out=call("acquire_execution",{"pane":s["pane"]})
  elif a.cmd=="send": s=session(a.session);out=call("terminal_submit",{"pane":s["pane"],"generation":a.generation,"text":a.text})
  elif a.cmd=="wait": out=call("terminal_wait_job",{"job_id":a.job_id,"wait_ms":a.seconds*1000})

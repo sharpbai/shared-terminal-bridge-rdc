@@ -1,16 +1,35 @@
-# Shared Terminal Bridge — RDC Adapter v0.1
+# Shared Terminal Bridge — RDC Adapter
 
-现有 Shared Terminal Bridge（STB）的薄 RDC 适配层。它不重写 tmux、HumanEventLayer、Execution Lease、Context Policy 或审计逻辑。
+ChatGPT + Remote Desktop Commander 到现有 Shared Terminal Bridge（STB）的薄适配层。
 
-## 架构
-ChatGPT → Remote Desktop Commander → stb-rdc → existing STB daemon → tmux → shared terminal
+## 核心原则
 
-Human 继续通过 iTerm2/tmux 操作同一个 pane。AI 正式写入必须经过 STB execution lease，不直接使用 RDC 调用 tmux send-keys。
+用户可以只说：
 
-## v0.1
+> 使用 STB-RDC，通过 verify33 帮我……
+
+第一次调用使用 `stb-rdc bootstrap SESSION` 读取 session/context/policy。后续所有 Terminal 执行都必须走：
+
+```text
+ChatGPT
+  ↓
+Remote Desktop Commander
+  ↓
+stb-rdc
+  ↓
+Shared Terminal Bridge
+  ↓
+tmux
+```
+
+RDC 只是 transport。正式 Terminal 操作不得绕过 Adapter/STB，不能直接使用 RDC 的 shell/process 工具执行用户任务，也不能直接调用 tmux send-keys。
+
+## v0.2 命令
+
 ```bash
 ./stb-rdc status
-./stb-rdc context SESSION --lines 80
+./stb-rdc bootstrap SESSION --lines 40
+./stb-rdc context SESSION --lines 40
 ./stb-rdc lease SESSION
 ./stb-rdc send SESSION GENERATION 'command'
 ./stb-rdc job JOB_ID
@@ -18,19 +37,35 @@ Human 继续通过 iTerm2/tmux 操作同一个 pane。AI 正式写入必须经�
 ./stb-rdc interrupt JOB_ID
 ```
 
-正常输出统一为 JSON，便于 RDC/ChatGPT 解析。
+## Interaction Policy
 
-## 边界
-- 只接受 STB 已托管 session。
-- Adapter 不直接调用 tmux。
-- Human Interrupt、lease、stale generation、安全策略全部由现有 STB 决定。
-- send 必须携带 generation。
-- Adapter 不隐式获取 execution lease。
-- 旧 shared-terminal-bridge 项目保持不变。
+- Human-primary。
+- bootstrap first，且 bootstrap 只做 discovery。
+- Terminal execution path 固定为 `RDC -> stb-rdc -> STB -> tmux`。
+- 禁止直接使用 RDC shell/process 执行共享 Terminal 任务。
+- 禁止绕过 STB 直接 tmux send-keys。
+- AI 写入必须取得 STB execution lease。
+- Human interrupt → STOP_CURRENT_TURN。
+- revoked generation → DENY。
+- wait timeout 不等于 job timeout / command failure。
 
-## v0.1 验收
-1. RDC 可调用 status。
-2. 可读取托管 session context。
-3. 显式 lease 后可 submit 无副作用命令。
-4. wait 可作为 RDC blocking call。
-5. Human Ctrl+C 后由 STB revoke lease，旧 generation 无法继续写入。
+## 长任务
+
+不再要求 ChatGPT 为调用前等待提示额外输出消息。用户已知 Remote MCP 调用期间可能没有中间文本反馈。
+
+长任务继续使用 STB 的 job/wait 模型：
+
+```text
+lease -> send -> job_id -> wait
+```
+
+这样保留 Human Ctrl+C、Job tracking、lease revoke 和 stale generation 安全语义。
+
+## 已验证安全基线
+
+- RDC → Adapter → STB → verify33。
+- Human Ctrl+C → INTERRUPTED_BY_HUMAN → lease REVOKED。
+- stale generation → EXECUTION_LEASE_INVALID。
+- blocking wait 可由 Human Event 自动唤醒。
+
+旧 shared-terminal-bridge 项目保持不变。
