@@ -1,5 +1,7 @@
 # Shared Terminal Bridge — RDC Adapter
 
+> **项目导航** · [Shared Terminal Bridge](https://github.com/sharpbai/shared-terminal-bridge)（核心 Bridge） · **[STB-RDC](https://github.com/sharpbai/shared-terminal-bridge-rdc)**（ChatGPT/RDC 远程适配器） · [系列文档](https://github.com/sharpbai/shared-terminal-bridge-docs)（设计与演进记录）
+
 让 ChatGPT 可以从任意环境触达实体机器，同时保留 Shared Terminal Bridge 的共享上下文、显式授权、Human Override 和本地审计边界。
 
 STB-RDC 是 Remote Desktop Commander（RDC）到 [Shared Terminal Bridge](https://github.com/sharpbai/shared-terminal-bridge) 的薄适配层。RDC 负责找到设备并建立远程调用通道；真正的终端观察和执行仍通过目标机器上的 STB 与 tmux 完成。
