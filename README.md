@@ -6,9 +6,52 @@
 
 STB-RDC 是 Remote Desktop Commander（RDC）到 [Shared Terminal Bridge](https://github.com/sharpbai/shared-terminal-bridge) 的薄适配层。RDC 负责找到设备并建立远程调用通道；真正的终端观察和执行仍通过目标机器上的 STB 与 tmux 完成。
 
+## STB 与 STB-RDC 怎么选
+
+| 对比项 | STB | STB-RDC |
+| --- | --- | --- |
+| Agent 入口 | Codex | ChatGPT + Remote Desktop Commander 插件 |
+| 使用位置 | 主要在安装并运行 Codex、STB 的本机使用 | 手机、电脑、浏览器等任何能够访问同一 ChatGPT 账户及 RDC 插件的地方 |
+| 到达目标机器的方式 | Codex 在本机直接调用 STB MCP | ChatGPT 经 RDC 插件和本地 RDC runtime 调用 STB-RDC，再进入 STB |
+| 额度体验 | 每次模型编排与工具交互都会显式消耗 Codex 使用额度 | 与日常 ChatGPT 会话共享使用额度，工具调用通常不会单独显示为 Codex 用量；在当前实测使用强度下接近可持续调用 |
+| 更适合的任务 | 项目开发、代码修改、复杂诊断和持续时间较长的重操作 | 日常运维、随时发起的轻量操作、跨设备协作，以及长期累积会话上下文 |
+| 共同的执行边界 | 通过 STB 观察和操作受管 tmux，使用 execution lease、generation、Human Override 与本地审计 | 通过 STB 观察和操作受管 tmux，使用 execution lease、generation、Human Override 与本地审计 |
+
+两者不是互相替代的两套终端系统，而是共享同一个 STB 执行核心的不同 Agent 入口：需要开发能力和本机深度操作时使用 Codex + STB；需要从任意设备发起日常操作、延续 ChatGPT 上下文时使用 ChatGPT + RDC + STB-RDC。
+
+> **额度说明：**“接近可持续调用”描述的是本项目当前账户和实际使用方式下的体验，不代表无限额度或固定套餐承诺。ChatGPT 与 Codex 的额度、工具可用性和限流规则可能随账户方案及产品策略变化。
+
 ![ChatGPT 通过 RDC 和 STB 清理远程磁盘](assets/readme-demo/stb-rdc-disk-cleanup-demo.gif)
 
 上面的演示以远程磁盘清理为例：ChatGPT 通过 RDC 连接实体机器，使用 `stb-rdc` 发现 `verify33` 托管会话；STB 先提供只读上下文，人工批准后才授予 execution lease。命令在远程 tmux pane 中可见执行，长任务由目标机器本地等待，结果或 Human Override 再沿 RDC 返回 ChatGPT。
+
+## 背景：为什么封装 RDC 工具
+
+ChatGPT 很适合作为跨设备、带共享上下文的统一交互入口，但它运行在托管会话中，不能直接连接目标 Mac 上的 Unix socket，也不能天然访问本机的 tmux。仅有 STB，解决的是“Agent 到达本机以后，怎样安全地观察和操作共享终端”；它本身不负责把 ChatGPT 的请求送到实体机器。
+
+本项目当前使用已安装的 **Remote Desktop Commander（RDC）插件**补上这段连接：
+
+1. 用户在 ChatGPT 会话中提出运维意图，并明确要求使用 STB-RDC。
+2. ChatGPT 调用 Remote Desktop Commander 插件。
+3. RDC 插件通过已经连接的本地 RDC runtime，把结构化调用送到目标机器。
+4. 目标机器上的 `stb-rdc` 将调用转换成 STB 的 `bootstrap`、`context`、`lease`、`send`、`job/wait` 等操作。
+5. STB 在本机校验 pane、lease 和 generation，最终把经过授权的输入送入人机共享的 tmux pane。
+
+在本项目当前实测的部署方式中，这条链路不要求另外建立 ChatGPT Business 工作区，也不需要把本地 STB 发布成 ChatGPT Custom MCP：ChatGPT 到本机的可达性来自已经安装并连接的 RDC 插件及其本地 runtime，STB-RDC 只使用这条通道调用本地 STB。
+
+这是一项**部署事实和项目兼容性说明**，不是“所有个人 ChatGPT 账户都原生支持任意本地工具”的承诺。插件是否可用仍取决于用户的 ChatGPT 方案、插件安装状态、授权和 RDC 主机连接状态。OpenAI 官方的 Custom MCP 路径有不同限制：ChatGPT 不能直接连接本地 MCP server，完整的自定义 MCP 写入能力也有单独的方案要求。参见 [Developer mode and MCP apps in ChatGPT](https://help.openai.com/en/articles/12584461-developer-mode-and-mcp-apps-in-chatgpt)。
+
+### 为什么不让 RDC 直接执行 Shell
+
+RDC 解决的是“能否到达这台机器”，不是“这次模型决策是否仍被授权”。如果 ChatGPT 直接使用 RDC 的通用 Shell、process 或 filesystem 能力，虽然也能执行命令，但会形成 STB 之外的隐藏执行路径：人看不到同一个终端，`Ctrl+C` 无法撤销旧 generation，也不能复用 STB 的 pane ACL、审计和长任务状态。
+
+因此我们封装 `stb-rdc`，把两层能力明确分开：
+
+- **RDC 插件与本地 runtime**：负责 ChatGPT 到实体机器的连接、设备发现和结构化传输。
+- **STB-RDC**：负责把远程请求收敛为 STB API，并向模型声明正确的交互流程。
+- **STB**：负责本地强制执行授权、Human Override、审计和 tmux 共享上下文。
+
+一句话概括：**RDC 让 ChatGPT 到达本机，STB-RDC 让它只能沿受控路径进入 STB，STB 决定什么操作可以真正进入 tmux。**
 
 ## 为什么需要 STB-RDC
 
@@ -27,7 +70,7 @@ STB-RDC 的重点不是再造远程终端，而是把 ChatGPT 的远程可达性
 
 | 痛点 | STB-RDC 的处理方式 |
 | --- | --- |
-| ChatGPT 无法直接使用本地 STB socket | RDC 提供设备发现和远程 transport |
+| ChatGPT 无法直接使用本地 STB socket | RDC 插件与本地 runtime 提供设备发现和远程 transport |
 | 远程调用容易创建另一份隐藏 Shell | Adapter 始终绑定现有 STB 托管 tmux session |
 | RDC 原生能力可能绕过 STB | Exclusive Mode 将目标主机操作收敛到 STB capability plane |
 | 每次调用都重复传输完整终端 | `bootstrap/context` 返回有界上下文 |
@@ -41,25 +84,26 @@ STB-RDC 的重点不是再造远程终端，而是把 ChatGPT 的远程可达性
 ```mermaid
 flowchart LR
     U[User] --> C[ChatGPT]
-    C -->|remote call| R[RDC]
-    R -->|transport / bootstrap| A[stb-rdc]
+    C -->|plugin call| P[Remote Desktop Commander plugin]
+    P -->|connected host| R[Local RDC runtime]
+    R -->|structured transport| A[stb-rdc]
     A -->|local Unix socket| S[Shared Terminal Bridge]
     S -->|observe / leased input| T[managed tmux pane]
     H[Human at target] -->|keyboard / Ctrl+C| T
     T -->|Human event / job result| S
-    S --> A --> R --> C
+    S --> A --> R --> P --> C
 ```
 
 唯一的正式终端执行路径是：
 
 ```text
-ChatGPT → RDC → stb-rdc → STB → tmux
+ChatGPT → Remote Desktop Commander plugin → local RDC runtime → stb-rdc → STB → tmux
 ```
 
 职责边界：
 
 1. **ChatGPT**：理解意图、制定计划、展示命令并解释结果。
-2. **RDC**：发现设备、启动或调用 Adapter、传输结构化输入输出。
+2. **RDC 插件与本地 runtime**：把 ChatGPT 的调用送到已连接的实体机器，启动或调用 Adapter，并传输结构化输入输出。
 3. **stb-rdc**：把远程请求映射到稳定的 STB API，并声明交互策略。
 4. **STB**：强制 Pane ACL、execution lease、generation、job/wait 和 Human Override。
 5. **tmux**：保存双方共享的真实 Shell、终端历史和人工输入。
@@ -75,7 +119,13 @@ ChatGPT → RDC → stb-rdc → STB → tmux
 - Python 3
 - 已运行的 Shared Terminal Bridge daemon
 - 至少一个 STB 托管 tmux session
-- RDC 能够调用目标机器上的 `stb-rdc`
+- `stb-rdc` 已安装到 RDC runtime 可见的 `PATH`
+
+ChatGPT 一侧需要：
+
+- 已安装并授权 Remote Desktop Commander 插件
+- RDC 中的目标主机在线且已经连接
+- 当前会话能够调用该插件
 
 Adapter 没有第三方 Python 依赖，通过 STB 默认 Unix socket 工作。
 
