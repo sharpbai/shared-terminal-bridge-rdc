@@ -1,4 +1,17 @@
-# 验证与回归索引
+# 验证策略与回归入口
+
+本目录把“现在应该怎样验证”和“历史上实际验证过什么”分开：本文是当前维护入口；带版本号的文件是当时环境与结果的证据，不随日常代码调整重写。
+
+## 验证分层
+
+| 层级 | 适用范围 | 是否依赖真实环境 | 入口 |
+| --- | --- | --- | --- |
+| 编译与单元测试 | 每次代码修改 | 否 | `python3 -m compileall -q stb_rdc tests`、`python3 -m unittest discover -s tests -v` |
+| CLI smoke test | 参数或入口修改 | 否 | `./stb-rdc --help`、`./stb-rdc bootstrap --help` |
+| Bridge 只读回归 | Client、bootstrap、context 修改 | 需要本地 STB daemon | `./stb-rdc status`、`./stb-rdc bootstrap SESSION` |
+| 真实写入回归 | lease、send、wait、interrupt 或安全语义修改 | 需要专用 managed tmux 和人工配合 | 本文“手工端到端回归” |
+
+普通 CI 只运行前三项中的无外部依赖部分。RDC 授权、实体机器、STB daemon 和 tmux 属于真实环境，不应成为普通单元测试的隐式前置条件。
 
 ## 当前验证结论
 
@@ -12,7 +25,7 @@ ChatGPT
   → verify33 managed tmux session
 ```
 
-详细原始记录见 [v0.1 端到端验收](../VALIDATION-v0.1.md)。
+详细原始记录见 [v0.1 端到端验收](v0.1-e2e.md)。
 
 ## 能力矩阵
 
@@ -60,7 +73,7 @@ completion_confidence: authoritative
 recommended_action: STOP_CURRENT_TURN
 ```
 
-## 手工回归步骤
+## 手工端到端回归
 
 以下步骤会写入真实托管 pane，应只对专用测试 session 执行。
 
@@ -99,15 +112,8 @@ python3 ./stb-rdc wait JOB_ID --seconds 60
 - 使用旧 generation 的新 `send` 返回 `EXECUTION_LEASE_INVALID`
 - stale command 未进入 pane
 
-## 文档与素材检查
+## 历史验收记录
 
-```bash
-ruby -c scripts/generate_readme_demo.rb
-ruby scripts/generate_readme_demo.rb
-```
+- [v0.1 端到端验收](v0.1-e2e.md)：首次验证 RDC → Adapter → STB → tmux、blocking wait 和 Human Override。
 
-SVG 帧生成在被 Git 忽略的 `assets/readme-demo/frames/`。最终 GIF 使用 `rsvg-convert` 和 ImageMagick 合成，提交文件为：
-
-```text
-assets/readme-demo/stb-rdc-disk-cleanup-demo.gif
-```
+新增历史记录时使用 `vX.Y-e2e.md`，只记录当时的日期、版本、环境、操作和证据。当前命令或通用验证方法只更新本文，避免多个版本文档同时维护同一套步骤。

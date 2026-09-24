@@ -1,5 +1,7 @@
 # Shared Terminal Bridge — RDC Adapter
 
+[![CI](https://github.com/sharpbai/shared-terminal-bridge-rdc/actions/workflows/ci.yml/badge.svg)](https://github.com/sharpbai/shared-terminal-bridge-rdc/actions/workflows/ci.yml)
+
 <p align="center"><a href="https://github.com/sharpbai/shared-terminal-bridge">STB Core</a> · <a href="https://github.com/sharpbai/shared-terminal-bridge-rdc"><strong>RDC Adapter</strong></a> · <a href="https://github.com/sharpbai/shared-terminal-bridge-docs">Documentation</a></p>
 
 让 ChatGPT 可以从任意环境触达实体机器，同时保留 Shared Terminal Bridge 的共享上下文、显式授权、Human Override 和本地审计边界。
@@ -201,10 +203,11 @@ Human Ctrl+C = revoke the current Agent execution authority
 
 ## 文档
 
+- [文档导览](docs/README.md)
 - [快速上手与命令参考](docs/getting-started.md)
 - [架构与信任边界](docs/architecture.md)
-- [验证与回归索引](docs/validation-index.md)
-- [v0.1 端到端验收记录](VALIDATION-v0.1.md)
+- [开发与维护](docs/development.md)
+- [验证策略与回归记录](docs/validation/README.md)
 - [版本变化](CHANGELOG.md)
 - [上游 Shared Terminal Bridge](https://github.com/sharpbai/shared-terminal-bridge)
 
@@ -213,6 +216,12 @@ Human Ctrl+C = revoke the current Agent execution authority
 当前版本为 `0.2.3`，已经在 ChatGPT + RDC + STB + `verify33` 的真实链路上验证：正常提交、job/wait、人工 `Ctrl+C`、lease revoke、stale generation 拒绝，以及 blocking wait 被 Human Event 唤醒。
 
 STB-RDC 仍是薄 Adapter：它不复制 STB 的 Human Event Layer，不实现独立 lease，也不直接操作 tmux。后续演进应继续优先增强宿主 capability filtering、结构化错误和更稳定的远程工具协议，而不是把安全逻辑搬到 Adapter 中。
+
+## 人与 Agent 的低成本维护
+
+项目按调用边界组织，而不是把全部逻辑压缩在一个脚本里。入口、Socket 客户端、交互策略和 CLI 映射分别位于小模块中；人或 ChatGPT Instant 修改局部时，只需读取对应模块、相邻测试和必要文档。
+
+维护目标是合理的理解与修改成本，而不是最短代码或最多设计模式。普通测试使用内存 Fake Bridge，不依赖真实 RDC、STB daemon 或 tmux；GitHub 插件提交后由 CI 检查 Python 版本兼容、命令契约与版本一致性。代码定位和修改规则见 [AGENTS.md](AGENTS.md)，开发命令见[开发与维护](docs/development.md)，真实链路证据集中在[验证目录](docs/validation/README.md)。
 
 ## 安装命令到 PATH
 

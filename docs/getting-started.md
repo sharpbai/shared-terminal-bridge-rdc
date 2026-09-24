@@ -1,6 +1,6 @@
 # 快速上手与命令参考
 
-本文集中记录 STB-RDC 的准备、命令和故障处理。设计与信任边界见[架构说明](architecture.md)，实测结果见[验证索引](validation-index.md)。
+本文集中记录 STB-RDC 的准备、命令和故障处理。设计与信任边界见[架构说明](architecture.md)，实测结果见[验证目录](validation/README.md)。
 
 ## 运行要求
 

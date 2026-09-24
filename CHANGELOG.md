@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- 将压缩的单文件 Adapter 拆为 client、policy、CLI 和 config 小模块，保持命令与 JSON 契约不变。
+- 增加面向 ChatGPT Instant 与人工维护的 `AGENTS.md`、代码地图和文档导览。
+- 增加不依赖真实 RDC、STB daemon 或 tmux 的单元测试，以及 Python 3.11/3.12 CI。
+- 增加版本一致性检查，并将真实 RDC 链路明确保留为手工验收。
+
 ## v0.2.3 — 2026-09-22
 
 - 放弃“Remote MCP 调用前额外输出等待提示”的协议设计，避免额外 token 和不稳定的 turn 编排。
