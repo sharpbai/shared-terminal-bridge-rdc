@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/sharpbai/shared-terminal-bridge-rdc/actions/workflows/ci.yml/badge.svg)](https://github.com/sharpbai/shared-terminal-bridge-rdc/actions/workflows/ci.yml)
 
-<p align="center"><a href="https://github.com/sharpbai/shared-terminal-bridge">STB Core</a> · <a href="https://github.com/sharpbai/shared-terminal-bridge-rdc"><strong>RDC Adapter</strong></a> · <a href="https://github.com/sharpbai/shared-terminal-bridge-docs">Documentation</a></p>
+<p align="center"><a href="https://github.com/sharpbai/shared-terminal-bridge">STB Core</a> · <a href="https://github.com/sharpbai/shared-terminal-bridge-rdc"><strong>RDC Adapter</strong></a> · <a href="https://github.com/sharpbai/shared-terminal-bridge-tools">Tools</a> · <a href="https://github.com/sharpbai/shared-terminal-bridge-docs">Documentation</a></p>
 
 让 ChatGPT 可以从任意环境触达实体机器，同时保留 Shared Terminal Bridge 的共享上下文、显式授权、Human Override 和本地审计边界。
 
