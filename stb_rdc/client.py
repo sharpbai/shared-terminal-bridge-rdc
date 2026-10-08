@@ -1,15 +1,11 @@
 """Small newline-delimited JSON client for the local STB Unix socket."""
-
 import json
 import socket
 from pathlib import Path
 from typing import Any
 
 from .config import DEFAULT_SOCKET
-
-
-class BridgeError(RuntimeError):
-    """Raised when the local Bridge cannot complete an API request."""
+from .errors import BridgeError, bridge_failure
 
 
 class BridgeClient:
@@ -29,15 +25,30 @@ class BridgeClient:
                 with connection.makefile("r", encoding="utf-8") as reader:
                     line = reader.readline()
         except OSError as error:
-            raise BridgeError(f"STB unavailable: {error}") from error
+            raise BridgeError(
+                f"STB transport unavailable: {error}", layer="local_transport",
+                code="STB_TRANSPORT_ERROR"
+            ) from error
 
         if not line:
-            raise BridgeError("STB returned empty response")
-
-        response = json.loads(line)
+            raise BridgeError(
+                "STB returned empty response", layer="local_transport",
+                code="STB_EMPTY_RESPONSE"
+            )
+        try:
+            response = json.loads(line)
+        except (ValueError, TypeError) as error:
+            raise BridgeError(
+                "STB returned invalid JSON", layer="local_transport",
+                code="STB_INVALID_RESPONSE"
+            ) from error
+        if not isinstance(response, dict):
+            raise BridgeError(
+                "STB returned non-object response", layer="local_transport",
+                code="STB_INVALID_RESPONSE"
+            )
         if not response.get("ok"):
-            detail = json.dumps(response.get("error"), ensure_ascii=False)
-            raise BridgeError(detail)
+            raise bridge_failure(response.get("error"))
         return response["result"]
 
     def session(self, name: str) -> dict[str, Any]:
@@ -45,4 +56,7 @@ class BridgeClient:
         for managed_session in sessions:
             if managed_session["name"] == name:
                 return managed_session
-        raise BridgeError(f"managed session not found: {name}")
+        raise BridgeError(
+            f"managed session not found: {name}", layer="adapter",
+            code="MANAGED_SESSION_NOT_FOUND"
+        )

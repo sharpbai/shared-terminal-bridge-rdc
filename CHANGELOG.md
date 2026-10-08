@@ -39,3 +39,10 @@
 - 完成 verify33 真实端到端验收。
 - 验证 Human Ctrl+C → INTERRUPTED_BY_HUMAN → lease REVOKED。
 - 验证 stale generation 写入被本地 STB 强制拒绝。
+
+## Error provenance / approval boundaries (2026-10-08)
+
+- Added structured error provenance for adapter, local Unix transport, and authoritative STB rejections.
+- Explicitly separate upstream OpenAI/RDC tool blocks from STB, shell, and target API failures; the adapter cannot observe calls rejected before it starts.
+- Align user confirmations with ChatGPT's task/risk judgment, avoiding per-command approval prompts; existing STB leases and Human Override remain mandatory.
+- Added unit tests and `docs/error-provenance.md`.

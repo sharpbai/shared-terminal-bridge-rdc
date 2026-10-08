@@ -100,10 +100,13 @@ def run(
 def main(argv: Sequence[str] | None = None) -> None:
     try:
         result = run(argv)
-    except (BridgeError, RuntimeError) as error:
-        print(
-            json.dumps({"ok": False, "error": str(error)}, ensure_ascii=False),
-            file=sys.stderr,
-        )
+    except BridgeError as error:
+        print(json.dumps(error.as_dict(), ensure_ascii=False), file=sys.stderr)
+        raise SystemExit(1) from error
+    except RuntimeError as error:
+        print(json.dumps({"ok": False, "error": {
+            "layer": "adapter", "code": "ADAPTER_ERROR",
+            "message": str(error), "detail": None
+        }}, ensure_ascii=False), file=sys.stderr)
         raise SystemExit(1) from error
     print(json.dumps(result, ensure_ascii=False, indent=2))

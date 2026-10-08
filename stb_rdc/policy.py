@@ -17,6 +17,23 @@ def interaction_policy() -> dict[str, Any]:
         "execution_requires_lease": True,
         "human_interrupt_action": "STOP_CURRENT_TURN",
         "revoked_generation_policy": "DENY",
+        "authorization_granularity": "task_or_risk_boundary_not_each_command",
+        "authorization_guidance": (
+            "Use ChatGPT's normal contextual judgment to scope operations and ask "
+            "for human confirmation at meaningful risk boundaries. Routine observations "
+            "and low-risk steps within the approved task need no extra conversational "
+            "approval. Destructive actions, privilege escalation, and material service "
+            "or network changes merit explicit human confirmation. Always honor STB "
+            "lease, pane ACL, long-run approvals and Human Override; these are separate "
+            "local enforcement rules, not substitutes for user consent."
+        ),
+        "error_provenance": {
+            "adapter": "invalid local session or adapter request",
+            "local_transport": "Unix socket/response failure between adapter and STB",
+            "stb": "authoritative STB error code including lease and ACL",
+            "upstream": "OpenAI safety or RDC rejection happens before adapter starts; classify in ChatGPT, never claim STB/Windows/API failed",
+            "target": "command/API failure only when STB job evidence establishes it",
+        },
         "wait_timeout_is_job_failure": False,
         "wait_timeout_guidance": (
             "A wait timeout only ends this observation window. Re-check the job; "
