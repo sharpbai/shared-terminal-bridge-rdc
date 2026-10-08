@@ -1,6 +1,7 @@
 import unittest
 
 from stb_rdc.cli import run
+from stb_rdc.config import ADAPTER_VERSION
 from tests.fakes import FakeBridgeClient
 
 
@@ -8,7 +9,7 @@ class CliTests(unittest.TestCase):
     def test_status_returns_adapter_and_bridge_metadata(self) -> None:
         client = FakeBridgeClient()
         result = run(["status"], client)
-        self.assertEqual(result["adapter_version"], "0.2.3")
+        self.assertEqual(result["adapter_version"], ADAPTER_VERSION)
         self.assertEqual(result["bridge"]["name"], "STB")
         self.assertEqual(result["sessions"][0]["name"], "verify33")
 

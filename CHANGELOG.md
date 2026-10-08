@@ -1,48 +1,49 @@
-# Changelog
+# 更新日志
 
-## Unreleased
+## 尚未发布
 
-- 将压缩的单文件 Adapter 拆为 client、policy、CLI 和 config 小模块，保持命令与 JSON 契约不变。
-- 增加面向 ChatGPT Instant 与人工维护的 `AGENTS.md`、代码地图和文档导览。
-- 增加不依赖真实 RDC、STB daemon 或 tmux 的单元测试，以及 Python 3.11/3.12 CI。
-- 增加版本一致性检查，并将真实 RDC 链路明确保留为手工验收。
+（暂无）
+
+## v0.2.4 — 2026-10-08
+
+- 将原先集中的单文件适配器拆分为客户端、交互策略、命令行接口和配置模块，保持命令及 JSON 接口兼容。
+- 增加面向 ChatGPT Instant 和人工维护的 `AGENTS.md`、代码结构说明和文档导览。
+- 增加无需真实 RDC、STB 后台服务或 tmux 的单元测试，以及 Python 3.11/3.12 持续集成检查。
+- 增加版本一致性检查；真实 RDC 链路仍采用人工验收。
+- 增加结构化错误归因，区分适配器、本地 Unix Socket 传输和 STB 返回的权威错误。
+- 明确区分上游 OpenAI/RDC 工具调用拦截与 STB、终端命令及目标 API 失败；调用未到达适配器时，适配器无法观察该错误。
+- 将人工确认的粒度与 ChatGPT 的任务意图及风险判断对齐，避免每条命令重复确认，同时继续执行 STB 的租约和人工中断机制。
+- 增加错误归因单元测试及 `docs/error-provenance.md` 说明文档。
 
 ## v0.2.3 — 2026-09-22
 
-- 放弃“Remote MCP 调用前额外输出等待提示”的协议设计，避免额外 token 和不稳定的 turn 编排。
-- 删除长调用提示阈值、BEFORE_REMOTE_TOOL_CALL 等相关策略字段。
-- 强化唯一执行路径：`RDC -> stb-rdc -> STB -> tmux`。
-- 明确 RDC 仅作为 transport；共享 Terminal 任务不得直接通过 RDC shell/process 执行。
-- 明确禁止直接 `tmux send-keys` 绕过 STB。
-- 保留 bootstrap discovery、execution lease、job/wait、Human Override 和 stale generation 安全语义。
+- 放弃在 Remote MCP 调用前额外输出等待提示的设计，减少额外 Token 开销及不稳定的会话编排。
+- 删除长调用提示阈值、`BEFORE_REMOTE_TOOL_CALL` 等策略字段。
+- 固定终端执行路径：`RDC -> stb-rdc -> STB -> tmux`。
+- RDC 只负责远程传输；共享终端任务不得直接通过 RDC 的 Shell 或进程工具执行。
+- 禁止直接使用 `tmux send-keys` 绕过 STB。
+- 保留会话初始化发现、执行租约、任务等待、人工优先中断和旧版本租约拒绝机制。
 
 ## v0.2.2 — 2026-09-22
 
-- 撤销 v0.2.1 的强制中断 tool loop 设计。
-- bootstrap 保持 discovery-only。
-- 固化 `send -> job_id -> wait` 长任务模型。
+- 撤销 v0.2.1 中强制中断工具调用链的设计。
+- `bootstrap` 继续只负责发现会话及上下文。
+- 固定 `send -> job_id -> wait` 的长任务执行流程。
 
 ## v0.2.1 — 2026-09-22
 
-- 曾尝试要求 bootstrap 后强制返回用户，再继续执行；后续撤销。
+- 曾尝试在 `bootstrap` 后强制向用户返回消息，再继续执行任务；因影响连续执行，后续已撤销。
 
 ## v0.2.0 — 2026-09-22
 
-- 新增 `bootstrap SESSION`。
-- context 默认 40 行并清理首尾空行。
-- 内置 Human-primary、execution lease、Human Interrupt、stale generation 等协议。
+- 新增 `bootstrap SESSION` 命令。
+- 终端上下文默认读取 40 行，清理开头与结尾的空行。
+- 内置人工优先、执行租约、人工中断及旧版本租约拒绝等交互规则。
 
 ## v0.1.0 — 2026-09-22
 
-- 建立 Remote Desktop Commander 到现有 Shared Terminal Bridge 的薄 Adapter。
-- 增加 status、context、lease、send、job、wait、interrupt。
-- 完成 verify33 真实端到端验收。
-- 验证 Human Ctrl+C → INTERRUPTED_BY_HUMAN → lease REVOKED。
-- 验证 stale generation 写入被本地 STB 强制拒绝。
-
-## Error provenance / approval boundaries (2026-10-08)
-
-- Added structured error provenance for adapter, local Unix transport, and authoritative STB rejections.
-- Explicitly separate upstream OpenAI/RDC tool blocks from STB, shell, and target API failures; the adapter cannot observe calls rejected before it starts.
-- Align user confirmations with ChatGPT's task/risk judgment, avoiding per-command approval prompts; existing STB leases and Human Override remain mandatory.
-- Added unit tests and `docs/error-provenance.md`.
+- 建立 Remote Desktop Commander 与既有 Shared Terminal Bridge 之间的轻量适配层。
+- 增加 `status`、`context`、`lease`、`send`、`job`、`wait`、`interrupt` 命令。
+- 完成 `verify33` 真实环境的端到端验收。
+- 验证真人按下 Ctrl+C 后任务状态变为 `INTERRUPTED_BY_HUMAN`、租约状态变为 `REVOKED`。
+- 验证旧版本租约的后续写入会被本地 STB 强制拒绝。
