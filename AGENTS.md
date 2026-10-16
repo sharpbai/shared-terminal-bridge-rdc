@@ -20,6 +20,7 @@ STB-RDC 是 ChatGPT Instant 经 RDC 调用本地 STB 的薄适配层。目标是
 - RDC 只负责设备发现和结构化传输，不用 shell、process、filesystem 绕过 STB。
 - Bootstrap 只发现，不申请 lease，不执行用户任务。
 - Wait 超时不等于 job 失败；Human Override 必须停止当前模型回合。
+- 人工 Ctrl+C 撤销租约后，应向用户说明授权失效，并针对指定会话及下一步操作请求明确重新授权；不得因含糊的“继续”自行恢复租约或重放被取消的命令。
 - 保持现有 CLI 参数和 JSON 契约兼容，除非明确做版本化变更。
 
 ## 修改原则

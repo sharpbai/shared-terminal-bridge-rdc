@@ -36,6 +36,14 @@ class PolicyTests(unittest.TestCase):
         self.assertFalse(result["wait_timeout_is_job_failure"])
         self.assertEqual(result["human_interrupt_action"], "STOP_CURRENT_TURN")
 
+    def test_human_override_requires_explicit_reauthorization(self) -> None:
+        policy = interaction_policy()
+        recovery = policy["human_override_recovery"]
+        self.assertFalse(recovery["reacquire_without_new_authorization"])
+        self.assertIn("fresh lease", recovery["guidance"])
+        self.assertIn("continuation prompt", recovery["guidance"])
+        self.assertIn("不会自动重放", recovery["example_request_zh"])
+
 
 if __name__ == "__main__":
     unittest.main()

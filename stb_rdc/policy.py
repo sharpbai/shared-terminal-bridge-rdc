@@ -16,6 +16,25 @@ def interaction_policy() -> dict[str, Any]:
         "direct_tmux_send_keys_forbidden": True,
         "execution_requires_lease": True,
         "human_interrupt_action": "STOP_CURRENT_TURN",
+        "human_override_recovery": {
+            "reacquire_without_new_authorization": False,
+            "guidance": (
+                "After a human Ctrl+C revokes the lease, stop the current execution "
+                "chain. Explain that Ctrl+C canceled the pending command and revoked "
+                "AI execution authority. If the shell was at a continuation prompt "
+                "(for example > from unmatched quoting), confirm recovery to a normal "
+                "prompt using read-only observation; do not resend the canceled command. "
+                "Ask for explicit renewed authorization scoped to the specific next "
+                "operation/session. Avoid vague requests to reply continue or approve. "
+                "Do not silently treat an ambiguous continue as renewal; once the "
+                "user clearly authorizes that scope, obtain a fresh lease."
+            ),
+            "example_request_zh": (
+                "刚才 Ctrl+C 取消了未完成的命令，也撤销了 AI 的执行授权。"
+                "终端恢复正常后，如果要继续，请明确授权我在指定会话执行下一步操作；"
+                "不会自动重放刚才取消的命令。"
+            ),
+        },
         "revoked_generation_policy": "DENY",
         "authorization_granularity": "task_or_risk_boundary_not_each_command",
         "authorization_guidance": (
