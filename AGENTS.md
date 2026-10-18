@@ -12,8 +12,8 @@ STB-RDC 是 ChatGPT Instant 经 RDC 调用本地 STB 的薄适配层。目标是
 - Unix socket 与错误处理：`stb_rdc/client.py`
 - Bootstrap 和交互约束：`stb_rdc/policy.py`
 - 版本和默认 socket：`stb_rdc/config.py`
-- 使用方式：`README.md`、`docs/getting-started.md`
-- 开发方式：`docs/development.md`
+- 使用方式：`README.md`、`docs/guides/getting-started.md`
+- 开发方式：`docs/development/maintenance.md`
 - 当前验证策略：`docs/validation/README.md`
 - 历史实测证据：`docs/validation/vX.Y-e2e.md`（仅在追溯行为时阅读）
 
@@ -25,10 +25,12 @@ STB-RDC 是 ChatGPT Instant 经 RDC 调用本地 STB 的薄适配层。目标是
 - Bootstrap 只发现，不申请 lease，不执行用户任务。
 - daemon 支持时普通执行优先 `run`；Adapter 只映射一个 Core 请求，不本地串联授权/提交/等待。启动 timeout_ms 必须显式为 1 毫秒；输入结果收集 timeout 与其分开。
 - Wait 超时不等于 job 失败；Human Override 停止当次执行链，不强制结束模型回合。
-- 人工 Ctrl+C 后，以 Bridge 本地收到调用的顺序续授权：新调用可自动获取新 generation，使用返回的 generation；旧调用内部后续步骤不得重放。仅高风险操作需要另行向人确认，不能用 RDC 绕过 Bridge 决策。
+- 执行期间人工 Ctrl+C 停止旧链；之后新明确调用按 Bridge 本地接收顺序内部续授权。模型不读取或传 generation；旧调用内部后续步骤不得重放，高风险仍批准，不用 RDC 绕过决策。
 - 模型接口只用 run、job ID 和审批请求 ID；旧 lease/send/generation 契约已移除，不保留兼容回退。
 
 ## 修改原则
+
+- 文档按 guides/reference/development/validation/history 分层；按日记录放 history/changes，当前协议只维护 reference。移动页面同时更新 README、代码导航和手册目录。
 
 - 追求局部易懂和合理维护成本，不追求最短代码或设计模式数量。
 - 新行为放入职责对应的小模块；不要让入口脚本重新膨胀。

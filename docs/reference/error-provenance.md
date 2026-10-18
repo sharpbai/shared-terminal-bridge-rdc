@@ -9,15 +9,15 @@ STB-RDC 仅能分类实际到达本地 Adapter 的错误。不要推断未到达
 | ChatGPT / OpenAI | TOOL_CALL_BLOCKED | RDC 调用未发生，平台明确报告被安全检查拦截；仅由 ChatGPT 侧报告 |
 | RDC | TRANSPORT_ERROR | 设备离线、MCP 远程调用失败；仅由 RDC/ChatGPT 侧报告 |
 | Adapter ↔ STB | STB_TRANSPORT_ERROR / STB_EMPTY_RESPONSE / STB_INVALID_RESPONSE | 本地 Unix socket 或响应协议失败 |
-| STB | EXECUTION_LEASE_INVALID、PANE_ACCESS_DENIED 等 | STB 实际返回的权威 code 与 detail |
-| 目标命令 | COMMAND_FAILED | STB job 输出和退出状态提供可核实证据 |
+| STB | JOB_NOT_CURRENT、TERMINAL_BUSY、PANE_ACCESS_DENIED 等 | STB 实际返回的任务级 code 与 detail；内部授权字段默认隐藏 |
+| 目标命令 | 语法错误、目标程序失败 | job 输出等可核实证据；提示符返回不能当成可信退出码 |
 | 目标 API | API_ERROR | 实际请求到达目标 API 并收到可核实的失败响应 |
 
 不能因为 API 写请求遭 OpenAI 安全拦截，就称为 Clash Verge/Mihomo API 失败。没有得到目标返回时，其状态是未知，不是失败。
 
 本地 Adapter 错误输出采用：
 ```json
-{"ok":false,"error":{"layer":"stb","code":"EXECUTION_LEASE_INVALID","message":"...","detail":{"code":"EXECUTION_LEASE_INVALID"}}}
+{"ok":false,"error":{"layer":"stb","code":"JOB_NOT_CURRENT","message":"...","detail":{"code":"JOB_NOT_CURRENT"}}}
 ```
 旧的纯字符串 `error` 变成结构化对象；非零退出码仍表示 Adapter 调用失败。注意上游拒绝不会产生本地 JSON。
 

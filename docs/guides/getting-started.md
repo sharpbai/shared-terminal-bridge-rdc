@@ -13,7 +13,7 @@ Bootstrap 一次返回上下文、调用规则和请求模板，默认流程为�
 
 无需先申请 lease，无需读取或传递 generation。普通执行用 run，交互输入和中断使用 job ID。人工 Ctrl+C 停止旧链；新明确调用可以继续，高风险另行批准。
 
-完整请求格式只维护在[任务协议](stdio-transport.md)，不要复制多份参数说明。
+完整请求格式只维护在[任务协议](../reference/stdio-transport.md)，不要复制多份参数说明。
 
 ## 人工命令入口
 

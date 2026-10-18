@@ -2,6 +2,8 @@
 
 ## 尚未发布
 
+- 文档改为 guides/reference/development/validation/history 五层；重写当前架构与回归入口，日期记录进入 history/changes，旧路径引用及手册目录同步更新。
+
 ## v0.3.0 — 2026-10-19
 
 配套 STB v0.16.0，要求 Core 发布 model-tasks-v2、terminal_run 与持久去重能力。破坏性移除旧 lease/send/submit/generation 模型契约；升级 Core 后重启 Bridge，旧请求不自动重放。Adapter 为每次请求新进程，无常驻 worker 需重启。
@@ -36,7 +38,7 @@
 - 增加结构化错误归因，区分适配器、本地 Unix Socket 传输和 STB 返回的权威错误。
 - 明确区分上游 OpenAI/RDC 工具调用拦截与 STB、终端命令及目标 API 失败；调用未到达适配器时，适配器无法观察该错误。
 - 将人工确认的粒度与 ChatGPT 的任务意图及风险判断对齐，避免每条命令重复确认，同时继续执行 STB 的租约和人工中断机制。
-- 增加错误归因单元测试及 `docs/error-provenance.md` 说明文档。
+- 增加错误归因单元测试及 `docs/reference/error-provenance.md` 说明文档。
 
 ## v0.2.3 — 2026-09-22
 

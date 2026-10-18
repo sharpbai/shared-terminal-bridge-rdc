@@ -1,21 +1,21 @@
-# 文档导览
+# STB-RDC 文档入口
 
-STB-RDC 是薄适配层，文档也保持小而有明确入口。
+Agent 首次使用直接 `stb-rdc bootstrap SESSION`，按返回契约继续；无需先读这些文档。此目录供人阅读、排障和开发。
 
-| 想了解什么 | 从哪里开始 |
+| 目的 | 页面 |
 | --- | --- |
-| 为什么需要 STB-RDC、怎样使用 | [项目 README](../README.md) |
-| 安装、命令和故障排查 | [快速上手](getting-started.md) |
-| ChatGPT 安全传输复杂命令 | [RDC JSONL 通道](stdio-transport.md) |
-| 组件职责和安全边界 | [架构说明](architecture.md) |
-| 修改代码和运行测试 | [开发维护](development.md) |
-| 自动测试、真实链路回归和历史证据 | [验证目录](validation/README.md) |
+| 安装、首次接入、日常使用 | [快速上手](guides/getting-started.md) |
+| 请求格式、启动/退出和重试 | [JSONL 调用契约](reference/stdio-transport.md) |
+| 组件职责与安全边界 | [架构](reference/architecture.md) |
+| 判断错误来自哪里 | [错误归因](reference/error-provenance.md) |
+| 定位代码、测试和提交 | [开发维护](development/maintenance.md) |
+| 回归步骤和验收范围 | [验证目录](validation/README.md) |
+| 按日演进、性能比较、发布过程 | [历史目录](history/README.md) |
 
-使用者通常只需阅读 README 和快速上手；修改某个局部时，先按根目录 `AGENTS.md` 的定位表进入对应模块，不必通读所有文档。版本化验收记录只作为证据查阅，不是当前操作手册。
+## 与 Core 的边界
 
-## 组织规则
+Adapter 只负责发现、结构化传输和响应整形。授权、任务状态、去重及人工中断以 [Core 模型接口](../../shared-terminal-bridge/docs/reference/model-tasks.md) 为准；不在这里维护第二套状态机。
 
-- 根目录 `README.md` 只承担项目背景、核心流程、快速开始和文档入口。
-- `getting-started.md` 面向使用者，`development.md` 面向维护者，`architecture.md` 只解释稳定边界。
-- `validation/README.md` 保存当前验证方法；`validation/vX.Y-e2e.md` 保存不可变的历史证据。
-- 行为变化只更新职责对应的文档，避免在多篇文档复制同一套命令和说明。
+## 维护规则
+
+`guides/` 写如何用，`reference/` 写当前契约，`development/` 写如何改，`validation/` 写如何验和验过什么，`history/changes/` 写哪天为什么变。当前内容不混入旧命令；日期记录不替代协议。历史证据保留并注明版本，跨日另开页并互链。[CHANGELOG](../CHANGELOG.md)仅列发布摘要。

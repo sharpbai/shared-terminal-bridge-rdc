@@ -1,123 +1,47 @@
-# 验证策略与回归入口
+# 验证与回归
 
-本目录把“现在应该怎样验证”和“历史上实际验证过什么”分开：本文是当前维护入口；带版本号的文件是当时环境与结果的证据，不随日常代码调整重写。
+本页维护当前回归方法，不混入旧版调用步骤。已发布结果与实操性能见 [按日演进](../history/README.md)，早期链路证据见 [v0.1 验收](v0.1-e2e.md)，其中 lease/send 不是当前接口。
 
-## 验证分层
+## 选择测试层
 
-JSONL 通道普通测试见 `tests/test_stdio.py`，包括真实子进程在 stdin 未关闭时响应后退出；跨仓库 Unix socket 与 Codex 共用语料的验证入口见 [命令传输](../stdio-transport.md)。已做真实 RDC 的只读 info 快速启动/退出验证；本地测试不等于业务写入和长 wait 的插件人工验收。
-
-| 层级 | 适用范围 | 是否依赖真实环境 | 入口 |
-| --- | --- | --- | --- |
-| 编译与单元测试 | 每次代码修改 | 否 | `python3 -m compileall -q stb_rdc tests`、`python3 -m unittest discover -s tests -v` |
-| CLI smoke test | 参数或入口修改 | 否 | `./stb-rdc --help`、`./stb-rdc bootstrap --help` |
-| Bridge 只读回归 | Client、bootstrap、context 修改 | 需要本地 STB daemon | `./stb-rdc status`、`./stb-rdc bootstrap SESSION` |
-| 真实写入回归 | lease、send、wait、interrupt 或安全语义修改 | 需要专用 managed tmux 和人工配合 | 本文“手工端到端回归” |
-
-普通 CI 只运行前三项中的无外部依赖部分。RDC 授权、实体机器、STB daemon 和 tmux 属于真实环境，不应成为普通单元测试的隐式前置条件。
-
-## 当前验证结论
-
-STB-RDC v0.1–v0.2 已在以下真实链路验证：
-
-```text
-ChatGPT
-  → Remote Desktop Commander
-  → stb-rdc
-  → Shared Terminal Bridge 0.14.0
-  → verify33 managed tmux session
-```
-
-详细原始记录见 [v0.1 端到端验收](v0.1-e2e.md)。
-
-## 能力矩阵
-
-| 能力 | 结果 | 权威组件 |
+| 层级 | 何时运行 | 外部依赖 |
 | --- | --- | --- |
-| Adapter/Bridge 状态发现 | 通过 | stb-rdc + STB |
-| managed session 解析 | 通过 | STB session registry |
-| 有界 context 读取 | 通过 | STB Observation |
-| 显式 lease/generation | 通过 | STB Execution Lease |
-| 可见命令提交 | 通过 | STB terminal_submit |
-| job 完成识别 | 通过 | STB Job tracking |
-| blocking wait | 通过 | STB local wait |
-| Human Event 唤醒 wait | 通过 | STB Human Event Layer |
-| Human `Ctrl+C` 权威识别 | 通过 | tmux client + STB |
-| lease revoke | 通过 | STB Execution Lease |
-| stale generation 拒绝 | 通过 | STB write validation |
+| 编译、单元及 CLI smoke | 每次修改 | 无 |
+| Core socket 跨仓库回归 | JSONL、映射、重试修改 | 相邻 Core 仓库、本地 Unix socket |
+| 隔离真实 tmux | 执行或中断语义修改 | Core 测试、宿主 tmux，不在容器内 |
+| 插件端到端 | RDC 生命周期、业务展示或等待修改 | 已授权 RDC、在线设备、专用受管会话、真人 |
 
-## 实测场景
-
-### 正常命令
-
-```text
-generation: 14
-command: printf 'STB_RDC_V01_OK\n'
-result: COMPLETED
-evidence: output + prompt return
-```
-
-### Human Override
-
-```text
-command: ping 127.0.0.1
-result: INTERRUPTED_BY_HUMAN
-lease: REVOKED
-stale write: EXECUTION_LEASE_INVALID
-```
-
-### Blocking wait
-
-```text
-generation: 16
-command: sleep 120
-Human Ctrl+C 后约 7.8 秒返回
-completion_confidence: authoritative
-recommended_action: STOP_CURRENT_TURN
-```
-
-## 手工端到端回归
-
-以下步骤会写入真实托管 pane，应只对专用测试 session 执行。
-
-### 1. 状态和 bootstrap
+无依赖检查：
 
 ```bash
-python3 ./stb-rdc status
-python3 ./stb-rdc bootstrap verify33 --lines 20
+python3 -m compileall -q stb_rdc tests
+python3 -m unittest discover -s tests -v
+./stb-rdc
+./stb-rdc --help
+./stb-rdc bootstrap --help
 ```
 
-确认 `bootstrap_result.discovery_only=true`、`task_executed=false`，且 Interaction Policy 要求固定执行路径。
+socket 与 tmux 的命令只维护在 [Core 测试说明](../../../shared-terminal-bridge/docs/development/testing.md)。不要把业务终端作为自动测试前置条件。
 
-### 2. 正常执行
+## 专用会话端到端步骤
 
-```bash
-python3 ./stb-rdc lease verify33
-python3 ./stb-rdc send verify33 GENERATION "printf 'STB_RDC_REGRESSION_OK\\n'"
-python3 ./stb-rdc wait JOB_ID --seconds 30
+所有会话名、请求 ID、job ID 使用当次真实值。以下 run 会输入终端，必须在已授权的专用测试会话执行。
+
+1. 调用 `stb-rdc bootstrap SESSION`，确认 ready、discovery_only、task_executed=false 和当前任务契约。
+2. 按 [JSONL 契约](../reference/stdio-transport.md) 固定启动接收程序，stdin 发送一次 run：
+
+```json
+{"id":"NEW_UNIQUE_TEST_ID","op":"run","session":"TEST_SESSION","params":{"text":"printf STB_RDC_REGRESSION_OK","expected_duration_ms":1000,"resource_class":"normal","wait_ms":30000}}
 ```
 
-确认结果为 `COMPLETED`，pane 中能看到命令和输出。
+3. 检查可见命令、输出、job ID 和完成状态。相同逻辑 ID 重试不能再次输入；完成输出足够时不补读。
+4. 新 ID 运行 `ping 127.0.0.1`，真人在对应 tmux client 按 Ctrl+C，确认旧 job 为 INTERRUPTED_BY_HUMAN；旧 ID 重试不能恢复它。
+5. 新明确低风险 run 可按 Core 接收顺序继续；旧 job 的 input/interrupt 不能控制新任务。
+6. 空闲 Ctrl+C 不误撤权；Agent interrupt 不伪装成人工输入。wait 超时或取消观察不得停止目标任务。
+7. 长任务验证 RDC 收集窗口结束后的 PID 输出读取；不重复输入、不换 ID 猜测重发。高风险审批另测，不自动批准。
 
-### 3. Human Override
+每条请求新进程，一响应后退出，不复用 PID。出现能力缺失、事件断流或不确定执行状态时 fail closed，不旁路测试。
 
-提交持续运行命令：
+## 证据口径
 
-```bash
-python3 ./stb-rdc send verify33 GENERATION 'ping 127.0.0.1'
-python3 ./stb-rdc wait JOB_ID --seconds 60
-```
-
-在目标机器的真实 tmux client 中按 `Ctrl+C`。确认：
-
-- wait 提前返回 `INTERRUPTED_BY_HUMAN`
-- lease 为 `REVOKED`
-- 使用旧 generation 的新 `send` 返回 `EXECUTION_LEASE_INVALID`
-- stale command 未进入 pane
-
-## 历史验收记录
-
-- [2026-10-18 JSONL 命令通道调整](2026-10-18-jsonl-transport.md)：本地自动验证、Core 能力加载与远端插件待验收边界。
-
-- [v0.1 端到端验收](v0.1-e2e.md)：首次验证 RDC → Adapter → STB → tmux、blocking wait 和 Human Override。
-
-新增历史记录时使用 `vX.Y-e2e.md`，只记录当时的日期、版本、环境、操作和证据。当前命令或通用验证方法只更新本文，避免多个版本文档同时维护同一套步骤。
+自动测试通过不等于真实插件全部场景已验收；本机工具耗时不是整轮模型延迟。发布时记录测试数量、跳过项、环境、CI 结果与实际加载状态；日期结论放到 `history/changes/`，专项验收结果可留在本目录。当前回归方法只维护这一份。

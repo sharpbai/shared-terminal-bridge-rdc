@@ -50,4 +50,4 @@ Human Ctrl+C 取消旧执行链，不允许自动重放；之后的新明确 run
 
 Adapter 普通测试不依赖真实服务。Core 的 socket/隔离 tmux 回归覆盖 run 去重、重启自动授权、job 输入/中断隔离、审批和取消等待。默认模型契约需要新 Core，升级后重启 Bridge；Codex 需重连 MCP 刷新工具列表。
 
-Core 接口语义见[模型任务接口](../../shared-terminal-bridge/docs/reference/model-tasks.md)。历史吞吐对照和当日记录见[验证目录](validation/README.md)。本地计时不代表网络与模型整轮延迟。
+Core 接口语义见[模型任务接口](../../../shared-terminal-bridge/docs/reference/model-tasks.md)。历史吞吐对照和当日记录见[验证目录](../validation/README.md)。本地计时不代表网络与模型整轮延迟。

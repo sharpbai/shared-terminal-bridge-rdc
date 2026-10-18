@@ -27,7 +27,7 @@ python3 -m unittest discover -s tests -v
 ./stb-rdc bootstrap --help
 ```
 
-这些检查不要求 daemon、tmux 或 RDC。真实执行语义发生变化时，再执行[验证策略](validation/README.md)中的手工回归。
+这些检查不要求 daemon、tmux 或 RDC。真实执行语义发生变化时，再执行[验证策略](../validation/README.md)中的手工回归。
 
 README 演示素材调整后另行运行：
 

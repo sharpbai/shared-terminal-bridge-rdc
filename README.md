@@ -4,25 +4,6 @@
 
 <p align="center"><a href="https://github.com/sharpbai/shared-terminal-bridge">STB Core</a> · <a href="https://github.com/sharpbai/shared-terminal-bridge-rdc"><strong>RDC Adapter</strong></a> · <a href="https://github.com/sharpbai/shared-terminal-bridge-tools">Tools</a> · <a href="https://github.com/sharpbai/shared-terminal-bridge-docs">Documentation</a></p>
 
-## Agent 最短入口
-
-直接运行 `stb-rdc` 即显示完整命令帮助，并附 Agent 的 bootstrap 入口引导；具体规则和模板仍在 bootstrap 返回中，无需额外调用 `--help`，也无需 daemon 在线。已有入口信息时直接 bootstrap，不必先运行无参数命令。
-
-首次使用指定会话，优先一次 RDC `start_process` 执行 `stb-rdc bootstrap SESSION --lines 20`。这是只读发现，不包含目标命令；返回 ready=true 后直接按 run 模板执行，不需要先调用 help，也不重复 bootstrap。仅需要刷新终端内容时使用 context。
-
-也支持下列 stdin 发现方式，不必先通读 README 或协议文档：
-
-1. RDC `start_process`：`command="stb-rdc serve-stdio"`，`timeout_ms=1`，取得 PID。
-2. 立即 `interact_with_process` 向该 PID 输入下面一行 JSON，末尾附换行；将 `verify33` 替换为用户指定的会话名，ID 使用新唯一值。
-
-```json
-{"id":"NEW_UNIQUE_ID","op":"bootstrap","session":"verify33"}
-```
-
-返回会话、有限终端上下文、交互规则、协议 revision 和后续请求模板。Bootstrap **不取租约、不执行任务**。按返回的模板继续，每条请求新启进程；已有相同协议契约时不重复读说明，环境变化或兼容性错误再发现。详细排障才查[协议说明](docs/stdio-transport.md)。
-
-普通命令优先使用返回的 `run` 模板，一次完成 lease/submit/wait，不再分三次调用。启动必须是 **`timeout_ms=1`（1 毫秒，不是 1000）**，不得省略使用默认值；仅后续 stdin 结果收集可用 3000。Core 未提供 run 能力时先升级/重启，不让 Adapter 偷偷拆步执行。
-
 让 ChatGPT 可以从任意环境触达实体机器，同时保留 Shared Terminal Bridge 的共享上下文、显式授权、Human Override 和本地审计边界。
 
 STB-RDC 是 Remote Desktop Commander（RDC）到 [Shared Terminal Bridge](https://github.com/sharpbai/shared-terminal-bridge) 的薄适配层。RDC 负责找到设备并建立远程调用通道；真正的终端观察和执行仍通过目标机器上的 STB 与 tmux 完成。
@@ -129,7 +110,7 @@ ChatGPT → Remote Desktop Commander plugin → local RDC runtime → stb-rdc �
 4. **STB**：强制 Pane ACL、execution lease、generation、job/wait 和 Human Override。
 5. **tmux**：保存双方共享的真实 Shell、终端历史和人工输入。
 
-更完整的信任边界和状态流转见[架构说明](docs/architecture.md)。
+更完整的信任边界和状态流转见[架构说明](docs/reference/architecture.md)。
 
 ## 快速开始
 
@@ -168,7 +149,7 @@ python3 ./stb-rdc bootstrap verify33 --lines 40
 
 ### 4. 观察和执行
 
-ChatGPT 经 RDC 提交命令时，优先使用 [JSONL 标准输入通道](docs/stdio-transport.md)：以 `timeout_ms=1` 固定启动 `stb-rdc serve-stdio`，取得 PID 后立即用 `interact_with_process` 输入一条 JSON。程序输出结果后退出，每次请求重新启动，不复用 PID。不要把目标命令拼入 RDC 启动字符串。下列 CLI 保留供人工兼容使用。
+ChatGPT 经 RDC 提交命令时，优先使用 [JSONL 标准输入通道](docs/reference/stdio-transport.md)：以 `timeout_ms=1` 固定启动 `stb-rdc serve-stdio`，取得 PID 后立即用 `interact_with_process` 输入一条 JSON。程序输出结果后退出，每次请求重新启动，不复用 PID。不要把目标命令拼入 RDC 启动字符串。下列 CLI 保留供人工兼容使用。
 
 ```bash
 python3 ./stb-rdc context verify33 --lines 40
@@ -177,7 +158,7 @@ python3 ./stb-rdc wait JOB_ID --seconds 60
 
 命令执行使用 stdin 的 `run` 模板；无需申请租约或传递授权计数。后续观察、交互与中断使用实际返回的 job ID。旧 CLI lease/send 和旧 stdin submit 不再兼容。
 
-完整的准备、命令说明和故障排查见[快速上手](docs/getting-started.md)。
+完整的准备、命令说明和故障排查见[快速上手](docs/guides/getting-started.md)。
 
 ## Exclusive Mode
 
@@ -223,9 +204,9 @@ STB 命令执行期间，人按 `Ctrl+C` 后，当前 job 返回 `INTERRUPTED_BY
 ## 文档
 
 - [文档导览](docs/README.md)
-- [快速上手与命令参考](docs/getting-started.md)
-- [架构与信任边界](docs/architecture.md)
-- [开发与维护](docs/development.md)
+- [快速上手与命令参考](docs/guides/getting-started.md)
+- [架构与信任边界](docs/reference/architecture.md)
+- [开发与维护](docs/development/maintenance.md)
 - [验证策略与回归记录](docs/validation/README.md)
 - [版本变化](CHANGELOG.md)
 - [上游 Shared Terminal Bridge](https://github.com/sharpbai/shared-terminal-bridge)
@@ -240,7 +221,7 @@ STB-RDC 仍是薄 Adapter：它不复制 STB 的 Human Event Layer，不实现�
 
 项目按调用边界组织，而不是把全部逻辑压缩在一个脚本里。入口、Socket 客户端、交互策略和 CLI 映射分别位于小模块中；人或 ChatGPT Instant 修改局部时，只需读取对应模块、相邻测试和必要文档。
 
-维护目标是合理的理解与修改成本，而不是最短代码或最多设计模式。普通测试使用内存 Fake Bridge，不依赖真实 RDC、STB daemon 或 tmux；GitHub 插件提交后由 CI 检查 Python 版本兼容、命令契约与版本一致性。代码定位和修改规则见 [AGENTS.md](AGENTS.md)，开发命令见[开发与维护](docs/development.md)，真实链路证据集中在[验证目录](docs/validation/README.md)。
+维护目标是合理的理解与修改成本，而不是最短代码或最多设计模式。普通测试使用内存 Fake Bridge，不依赖真实 RDC、STB daemon 或 tmux；GitHub 插件提交后由 CI 检查 Python 版本兼容、命令契约与版本一致性。代码定位和修改规则见 [AGENTS.md](AGENTS.md)，开发命令见[开发与维护](docs/development/maintenance.md)，真实链路证据集中在[验证目录](docs/validation/README.md)。
 
 ## 安装命令到 PATH
 

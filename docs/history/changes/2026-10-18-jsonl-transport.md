@@ -1,6 +1,8 @@
 # STB-RDC 调整记录：JSONL 命令通道（2026-10-18）
 
-本记录保存本轮本地实现、验证和边界。Adapter 版本号仍为 `0.2.5`，新增内容尚未发布新版本。日常调用以 [JSONL 使用说明](../stdio-transport.md)为准，不从历史记录复制 generation 或 job ID。
+> 历史阶段记录：常驻 worker、lease/submit 模板及“未发布”等描述反映各阶段快照，不作为当前用法。最终机制、性能对比和 v0.3.0 发布见 [2026-10-19 整理记录](2026-10-19-discovery-performance-release.md)。
+
+本记录保存本轮本地实现、验证和边界。Adapter 版本号仍为 `0.2.5`，新增内容尚未发布新版本。日常调用以 [JSONL 使用说明](../../reference/stdio-transport.md)为准，不从历史记录复制 generation 或 job ID。
 
 当天后续已将初版常驻接收方式改为单请求后退出；下方“本轮实现”保留初版过程，最新生命周期与补充验证见本文末尾。
 
@@ -58,7 +60,7 @@ Adapter 不复制 lease/job 状态机，不直接操作 tmux。人工 Ctrl+C 停
 
 下一步在专用会话验证 ChatGPT → RDC 插件 → worker 的启动、PID 生命周期、完整响应收集和长等待展示。不能将本地测试通过写成远端插件端到端已验收。代码尚未因本轮操作提交、推送或发布新版本。
 
-Core 相关调整、123 项默认测试与重启证据见 [STB 当日记录](../../../shared-terminal-bridge/docs/validation/2026-10-18-state-and-transport.md)。
+Core 相关调整、123 项默认测试与重启证据见 [STB 当日记录](../../../../shared-terminal-bridge/docs/history/changes/2026-10-18-state-and-transport.md)。
 
 ## 当天后续：取消常驻接收，单请求响应后退出
 
