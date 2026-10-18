@@ -32,6 +32,7 @@ class FakeBridgeClient:
                 "state": "RUNNING",
             },
             "terminal_interrupt": {"job_id": "job-1", "state": "INTERRUPTING"},
+            "terminal_interrupt_job": {"job_id": "job-1", "state": "INTERRUPTING"},
         }
         return responses[method]
 

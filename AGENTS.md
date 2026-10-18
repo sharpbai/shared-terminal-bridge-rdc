@@ -4,7 +4,11 @@ STB-RDC 是 ChatGPT Instant 经 RDC 调用本地 STB 的薄适配层。目标是
 
 ## 先读哪里
 
+运行任务首次接入优先一次只读 `stb-rdc bootstrap SESSION`；也支持 stdin bootstrap。返回已有 context/policy/templates 时不重复发现或例行读取完整文档，终端刷新用 context。目标命令仍只走 stdin。开发修改仍按下列代码地图定位。
+
 - 命令参数或 API 映射：`stb_rdc/cli.py`
+- RDC JSONL 数据通道：`stb_rdc/stdio.py`（命令内容不可拼入启动 Shell）
+- stdin 接收进程一次请求后退出；RDC `start_process(timeout_ms=1)` 后立即输入，不复用 PID、不引入常驻 worker。
 - Unix socket 与错误处理：`stb_rdc/client.py`
 - Bootstrap 和交互约束：`stb_rdc/policy.py`
 - 版本和默认 socket：`stb_rdc/config.py`
@@ -19,9 +23,10 @@ STB-RDC 是 ChatGPT Instant 经 RDC 调用本地 STB 的薄适配层。目标是
 - Adapter 不直接操作 tmux，不复制 lease、job 或 Human Event 状态机。
 - RDC 只负责设备发现和结构化传输，不用 shell、process、filesystem 绕过 STB。
 - Bootstrap 只发现，不申请 lease，不执行用户任务。
-- Wait 超时不等于 job 失败；Human Override 必须停止当前模型回合。
-- 人工 Ctrl+C 撤销租约后，应向用户说明授权失效，并针对指定会话及下一步操作请求明确重新授权；不得因含糊的“继续”自行恢复租约或重放被取消的命令。
-- 保持现有 CLI 参数和 JSON 契约兼容，除非明确做版本化变更。
+- daemon 支持时普通执行优先 `run`；Adapter 只映射一个 Core 请求，不本地串联授权/提交/等待。启动 timeout_ms 必须显式为 1 毫秒；输入结果收集 timeout 与其分开。
+- Wait 超时不等于 job 失败；Human Override 停止当次执行链，不强制结束模型回合。
+- 人工 Ctrl+C 后，以 Bridge 本地收到调用的顺序续授权：新调用可自动获取新 generation，使用返回的 generation；旧调用内部后续步骤不得重放。仅高风险操作需要另行向人确认，不能用 RDC 绕过 Bridge 决策。
+- 模型接口只用 run、job ID 和审批请求 ID；旧 lease/send/generation 契约已移除，不保留兼容回退。
 
 ## 修改原则
 

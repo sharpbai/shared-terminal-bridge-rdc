@@ -92,7 +92,8 @@ physical Ctrl+C
   → lease REVOKED
   → wait wakes
   → RDC returns event
-  → ChatGPT stops current turn
+  → ChatGPT stops canceled call's execution chain
+  → new calls received locally may auto-renew generation
 ```
 
 即使远端网络或 ChatGPT 延迟，旧 generation 也已经在目标机器本地失效。

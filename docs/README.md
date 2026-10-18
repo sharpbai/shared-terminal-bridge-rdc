@@ -6,6 +6,7 @@ STB-RDC 是薄适配层，文档也保持小而有明确入口。
 | --- | --- |
 | 为什么需要 STB-RDC、怎样使用 | [项目 README](../README.md) |
 | 安装、命令和故障排查 | [快速上手](getting-started.md) |
+| ChatGPT 安全传输复杂命令 | [RDC JSONL 通道](stdio-transport.md) |
 | 组件职责和安全边界 | [架构说明](architecture.md) |
 | 修改代码和运行测试 | [开发维护](development.md) |
 | 自动测试、真实链路回归和历史证据 | [验证目录](validation/README.md) |

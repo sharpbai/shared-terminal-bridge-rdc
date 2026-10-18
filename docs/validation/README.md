@@ -4,6 +4,8 @@
 
 ## 验证分层
 
+JSONL 通道普通测试见 `tests/test_stdio.py`，包括真实子进程在 stdin 未关闭时响应后退出；跨仓库 Unix socket 与 Codex 共用语料的验证入口见 [命令传输](../stdio-transport.md)。已做真实 RDC 的只读 info 快速启动/退出验证；本地测试不等于业务写入和长 wait 的插件人工验收。
+
 | 层级 | 适用范围 | 是否依赖真实环境 | 入口 |
 | --- | --- | --- | --- |
 | 编译与单元测试 | 每次代码修改 | 否 | `python3 -m compileall -q stb_rdc tests`、`python3 -m unittest discover -s tests -v` |
@@ -113,6 +115,8 @@ python3 ./stb-rdc wait JOB_ID --seconds 60
 - stale command 未进入 pane
 
 ## 历史验收记录
+
+- [2026-10-18 JSONL 命令通道调整](2026-10-18-jsonl-transport.md)：本地自动验证、Core 能力加载与远端插件待验收边界。
 
 - [v0.1 端到端验收](v0.1-e2e.md)：首次验证 RDC → Adapter → STB → tmux、blocking wait 和 Human Override。
 

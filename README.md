@@ -4,6 +4,25 @@
 
 <p align="center"><a href="https://github.com/sharpbai/shared-terminal-bridge">STB Core</a> · <a href="https://github.com/sharpbai/shared-terminal-bridge-rdc"><strong>RDC Adapter</strong></a> · <a href="https://github.com/sharpbai/shared-terminal-bridge-tools">Tools</a> · <a href="https://github.com/sharpbai/shared-terminal-bridge-docs">Documentation</a></p>
 
+## Agent 最短入口
+
+直接运行 `stb-rdc` 即显示完整命令帮助，并附 Agent 的 bootstrap 入口引导；具体规则和模板仍在 bootstrap 返回中，无需额外调用 `--help`，也无需 daemon 在线。已有入口信息时直接 bootstrap，不必先运行无参数命令。
+
+首次使用指定会话，优先一次 RDC `start_process` 执行 `stb-rdc bootstrap SESSION --lines 20`。这是只读发现，不包含目标命令；返回 ready=true 后直接按 run 模板执行，不需要先调用 help，也不重复 bootstrap。仅需要刷新终端内容时使用 context。
+
+也支持下列 stdin 发现方式，不必先通读 README 或协议文档：
+
+1. RDC `start_process`：`command="stb-rdc serve-stdio"`，`timeout_ms=1`，取得 PID。
+2. 立即 `interact_with_process` 向该 PID 输入下面一行 JSON，末尾附换行；将 `verify33` 替换为用户指定的会话名，ID 使用新唯一值。
+
+```json
+{"id":"NEW_UNIQUE_ID","op":"bootstrap","session":"verify33"}
+```
+
+返回会话、有限终端上下文、交互规则、协议 revision 和后续请求模板。Bootstrap **不取租约、不执行任务**。按返回的模板继续，每条请求新启进程；已有相同协议契约时不重复读说明，环境变化或兼容性错误再发现。详细排障才查[协议说明](docs/stdio-transport.md)。
+
+普通命令优先使用返回的 `run` 模板，一次完成 lease/submit/wait，不再分三次调用。启动必须是 **`timeout_ms=1`（1 毫秒，不是 1000）**，不得省略使用默认值；仅后续 stdin 结果收集可用 3000。Core 未提供 run 能力时先升级/重启，不让 Adapter 偷偷拆步执行。
+
 让 ChatGPT 可以从任意环境触达实体机器，同时保留 Shared Terminal Bridge 的共享上下文、显式授权、Human Override 和本地审计边界。
 
 STB-RDC 是 Remote Desktop Commander（RDC）到 [Shared Terminal Bridge](https://github.com/sharpbai/shared-terminal-bridge) 的薄适配层。RDC 负责找到设备并建立远程调用通道；真正的终端观察和执行仍通过目标机器上的 STB 与 tmux 完成。
@@ -36,7 +55,7 @@ ChatGPT 很适合作为跨设备、带共享上下文的统一交互入口，但
 1. 用户在 ChatGPT 会话中提出运维意图，并明确要求使用 STB-RDC。
 2. ChatGPT 调用 Remote Desktop Commander 插件。
 3. RDC 插件通过已经连接的本地 RDC runtime，把结构化调用送到目标机器。
-4. 目标机器上的 `stb-rdc` 将调用转换成 STB 的 `bootstrap`、`context`、`lease`、`send`、`job/wait` 等操作。
+4. 目标机器上的 `stb-rdc` 提供 `bootstrap`、`context`、`run`、`job/wait` 和 job 输入/中断操作。
 5. STB 在本机校验 pane、lease 和 generation，最终把经过授权的输入送入人机共享的 tmux pane。
 
 在本项目当前实测的部署方式中，这条链路不要求另外建立 ChatGPT Business 工作区，也不需要把本地 STB 发布成 ChatGPT Custom MCP：ChatGPT 到本机的可达性来自已经安装并连接的 RDC 插件及其本地 runtime，STB-RDC 只使用这条通道调用本地 STB。
@@ -76,7 +95,7 @@ STB-RDC 的重点不是再造远程终端，而是把 ChatGPT 的远程可达性
 | 远程调用容易创建另一份隐藏 Shell | Adapter 始终绑定现有 STB 托管 tmux session |
 | RDC 原生能力可能绕过 STB | Exclusive Mode 将目标主机操作收敛到 STB capability plane |
 | 每次调用都重复传输完整终端 | `bootstrap/context` 返回有界上下文 |
-| 写入权限生命周期不清晰 | `lease → send → job/wait`，每次写入校验 generation |
+| 写入权限生命周期不清晰 | `run → job ID`，授权和严格计数校验由 Core 内部完成 |
 | 远程长任务导致反复轮询 | Bridge 在目标机器本地等待，状态变化才返回 |
 | 人工中断后旧任务继续 | Human `Ctrl+C` 撤销 lease，旧 generation 被强制拒绝 |
 | Transport 超时被当成命令失败 | wait timeout 只结束观察窗口，不改变 job 状态 |
@@ -149,14 +168,14 @@ python3 ./stb-rdc bootstrap verify33 --lines 40
 
 ### 4. 观察和执行
 
+ChatGPT 经 RDC 提交命令时，优先使用 [JSONL 标准输入通道](docs/stdio-transport.md)：以 `timeout_ms=1` 固定启动 `stb-rdc serve-stdio`，取得 PID 后立即用 `interact_with_process` 输入一条 JSON。程序输出结果后退出，每次请求重新启动，不复用 PID。不要把目标命令拼入 RDC 启动字符串。下列 CLI 保留供人工兼容使用。
+
 ```bash
 python3 ./stb-rdc context verify33 --lines 40
-python3 ./stb-rdc lease verify33
-python3 ./stb-rdc send verify33 7 'df -h /'
 python3 ./stb-rdc wait JOB_ID --seconds 60
 ```
 
-其中 `7` 只是示例，必须使用本次 `lease` 实际返回的 generation。`send` 返回的 `job_id` 用于后续 `job` 或 `wait`，不得从历史记录复用 generation。
+命令执行使用 stdin 的 `run` 模板；无需申请租约或传递授权计数。后续观察、交互与中断使用实际返回的 job ID。旧 CLI lease/send 和旧 stdin submit 不再兼容。
 
 完整的准备、命令说明和故障排查见[快速上手](docs/getting-started.md)。
 
@@ -186,16 +205,16 @@ Human Ctrl+C ≠ retry
 Human Ctrl+C = revoke the current Agent execution authority
 ```
 
-人按下 `Ctrl+C` 后，当前 job 返回 `INTERRUPTED_BY_HUMAN`，lease 变为 `REVOKED`，旧 generation 的后续 `send` 会在进入 pane 前返回 `EXECUTION_LEASE_INVALID`。当前 ChatGPT 回合必须停止；只有新的用户意图才能开始新的授权周期。
+STB 命令执行期间，人按 `Ctrl+C` 后，当前 job 返回 `INTERRUPTED_BY_HUMAN`，旧执行链停止。Core 以本地接收顺序为新的明确 run 自动授权，不要求模型管理授权计数；旧 ID 不重复执行，高风险仍单独批准。模型契约要求 `model_tasks=job-authority-v2`，旧 daemon 需重启/升级。
 
-对于长任务，使用 `send → job_id → wait`。一次 `wait` 超时只表示当前观察窗口结束，不表示命令失败，也不授权自动发送 `Ctrl+C`。可以重新读取 job 状态，或在有可信进展时继续等待。
+对于长任务，使用 `run → job_id → wait`。一次 `wait` 超时只表示当前观察窗口结束，不表示命令失败，也不授权自动发送 `Ctrl+C`。可以重新读取 job 状态，或在有可信进展时继续等待。
 
 ## 安全与协作原则
 
 - **RDC is transport**：远程连接能力不等于目标主机执行权限。
 - **Bootstrap is discovery only**：冷启动先发现状态，不把“连接成功”解释为任务授权。
 - **STB is the enforcement point**：关键安全判断由目标机器本地完成。
-- **Read before write**：先用有界上下文确认环境，再展示命令并申请 lease。
+- **Read before write**：先用有界上下文确认环境，再通过 run 执行；授权由 Core 内部处理，高风险仍须明确批准。
 - **Visible execution**：命令进入人能看到的共享 tmux pane，不创建隐藏 Shell。
 - **Generation-bound authority**：旧回合、旧请求和并发晚到写入不能复用授权。
 - **Human first**：目标机器前的人始终可以直接接管。
@@ -213,7 +232,7 @@ Human Ctrl+C = revoke the current Agent execution authority
 
 ## 当前状态
 
-当前版本为 `0.2.5`，已经在 ChatGPT + RDC + STB + `verify33` 的真实链路上验证：正常提交、job/wait、人工 `Ctrl+C`、lease revoke、stale generation 拒绝，以及 blocking wait 被 Human Event 唤醒。
+当前版本为 `0.3.0`，配套 STB v0.16.0。模型使用 run/job ID，内部授权、持久去重、job 隔离与人工中断由 Core 校验。真实 ChatGPT/RDC 已验证新版 bootstrap/run 查询；完整验证范围与限制见[验证记录](docs/validation/README.md)。旧 lease/send/submit/generation 模型契约不兼容。
 
 STB-RDC 仍是薄 Adapter：它不复制 STB 的 Human Event Layer，不实现独立 lease，也不直接操作 tmux。后续演进应继续优先增强宿主 capability filtering、结构化错误和更稳定的远程工具协议，而不是把安全逻辑搬到 Adapter 中。
 

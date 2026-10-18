@@ -13,6 +13,7 @@ STB-RDC 由 ChatGPT 的轻量级 Instant 会话经 RDC 调用，并配合 GitHub
 | `stb_rdc/client.py` | Unix socket JSON 协议、Bridge 错误、session 解析 |
 | `stb_rdc/policy.py` | Interaction Policy、上下文裁剪、discovery bootstrap |
 | `stb_rdc/cli.py` | 参数解析与 STB API 的直接映射 |
+| `stb_rdc/stdio.py` | 一次性 JSONL 请求映射，bootstrap/run 能力发现与入口 |
 | `tests/` | 无真实 RDC/STB/tmux 依赖的契约测试 |
 
 如果修改命令参数，只读 `cli.py` 和相应测试；修改 socket 错误，只读 `client.py`；修改模型指导，只读 `policy.py`。跨模块语义变化才需要同时阅读架构文档。

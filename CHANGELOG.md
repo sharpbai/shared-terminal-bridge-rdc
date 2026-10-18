@@ -2,7 +2,25 @@
 
 ## 尚未发布
 
-（暂无）
+## v0.3.0 — 2026-10-19
+
+配套 STB v0.16.0，要求 Core 发布 model-tasks-v2、terminal_run 与持久去重能力。破坏性移除旧 lease/send/submit/generation 模型契约；升级 Core 后重启 Bridge，旧请求不自动重放。Adapter 为每次请求新进程，无常驻 worker 需重启。
+
+- `stb-rdc` 无参数时显示完整命令帮助并正常退出，额外附 Agent bootstrap 入口引导；具体规则和调用模板留在 bootstrap，无需另调 help 或连接 daemon。
+
+- 首次发现优先一次只读 CLI bootstrap，help 直接提供入口；默认返回精简安全契约，完整解释通过 `--detailed` / `params.detailed=true` 按需获取。明确 ready 后不重复 bootstrap，刷新终端改用 context；授权、执行、去重及人工中断语义不变。
+
+- 模型任务契约 v2：移除 lease/send/submit 和显式 generation 输入，run 内部授权，input/interrupt 只绑定 job ID，approve 只传审批请求 ID。默认响应隐藏内部元数据，旧模型调用不兼容；bootstrap 返回 model-tasks-v2，新 Core 需重启。
+
+- stdin `run` 映射 Core `terminal_run`，Bootstrap 仅在 daemon 支持时发布组合模板；普通操作不再分开 lease/submit/wait。明确启动 timeout_ms 必须为 1 毫秒，不是 1000；返回可直接使用的 startup_request，审批/去重/人工中断仍由 Core 控制。
+
+- 恢复低上下文 bootstrap 入口：stdin 支持 `op=bootstrap`，复用既有只读发现逻辑；返回协议 revision 和后续 JSON 请求模板，README 顶部提供两步最短入口，避免例行通读说明。Core 与执行语义不变。
+
+- `serve-stdio` 改为一次 stdin 请求、一次响应后退出，不等待 EOF，不复用进程。RDC 启动约定 `timeout_ms=1` 尽快返回 PID，随后立即输入；执行、wait、授权和去重保持不变。补充分片输入、stdin 保持打开、错误退出及跨进程重试回归。
+
+- 增加 `serve-stdio` JSONL 通道：固定启动、stdin 结构化命令、stdout 单行结构化结果；submit 使用 Core 持久请求 ID 去重，旧 Core 缺少能力时拒绝执行。保留人工 CLI，真正多行执行仍禁用。
+
+- 配合 Core 本地接收顺序自动续授权：Human Ctrl+C 停止当前执行链，不要求结束整个模型回合或普通人工重新授权；新调用使用返回的 generation，高风险确认保留。Bootstrap 展示 Core execution_policy，需重启 Core 后加载新语义。
 
 ## v0.2.5 — 2026-10-16
 

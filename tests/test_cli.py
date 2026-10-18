@@ -19,23 +19,17 @@ class CliTests(unittest.TestCase):
         self.assertEqual(result["terminal"]["content"], "ready")
         self.assertIn(("terminal_read", {"pane": "%5", "lines": 9}), client.calls)
 
-    def test_send_preserves_text_and_generation(self) -> None:
+    def test_old_send_is_removed(self) -> None:
         client = FakeBridgeClient()
-        result = run(["send", "verify33", "8", "df -h /"], client)
-        self.assertEqual(result["job_id"], "job-1")
-        self.assertIn(
-            (
-                "terminal_submit",
-                {"pane": "%5", "generation": 8, "text": "df -h /"},
-            ),
-            client.calls,
-        )
+        with self.assertRaises(SystemExit):
+            run(["send", "verify33", "8", "df -h /"], client)
+        self.assertEqual(client.calls, [])
 
     def test_lease_uses_resolved_managed_pane(self) -> None:
         client = FakeBridgeClient()
-        result = run(["lease", "verify33"], client)
-        self.assertEqual(result["generation"], 8)
-        self.assertEqual(client.calls[-1], ("acquire_execution", {"pane": "%5"}))
+        with self.assertRaises(SystemExit):
+            run(["lease", "verify33"], client)
+        self.assertEqual(client.calls, [])
 
     def test_wait_converts_seconds_to_milliseconds(self) -> None:
         client = FakeBridgeClient()
@@ -50,7 +44,7 @@ class CliTests(unittest.TestCase):
         run(["interrupt", "job-1"], client)
         self.assertEqual(
             client.calls[-1],
-            ("terminal_interrupt", {"pane": "%5", "generation": 8}),
+            ("terminal_interrupt_job", {"job_id": "job-1"}),
         )
 
     def test_job_reads_status_without_session_or_lease(self) -> None:

@@ -5,6 +5,13 @@ from tests.fakes import FakeBridgeClient
 
 
 class PolicyTests(unittest.TestCase):
+    def test_stdin_lifecycle_is_one_shot_with_fast_pid_return(self):
+        policy = interaction_policy()["command_transport"]
+        self.assertEqual(policy["startup_timeout_ms"], 1)
+        self.assertEqual(policy["preferred"], "serve-stdio-jsonl-once-v1")
+        self.assertIn("never reuse PID", policy["lifecycle"])
+        self.assertIn("exactly one", policy["guidance"])
+
     def test_compact_terminal_only_trims_blank_edges(self) -> None:
         result = compact_terminal(
             {"content": "\n first  \nsecond\n\n", "truncated": True}
@@ -34,13 +41,13 @@ class PolicyTests(unittest.TestCase):
         )
         self.assertTrue(result["direct_rdc_shell_execution_forbidden"])
         self.assertFalse(result["wait_timeout_is_job_failure"])
-        self.assertEqual(result["human_interrupt_action"], "STOP_CURRENT_TURN")
+        self.assertEqual(result["human_interrupt_action"], "STOP_CURRENT_EXECUTION_CHAIN")
 
-    def test_human_override_requires_explicit_reauthorization(self) -> None:
+    def test_new_call_can_renew_without_routine_reauthorization(self) -> None:
         policy = interaction_policy()
         recovery = policy["human_override_recovery"]
-        self.assertFalse(recovery["reacquire_without_new_authorization"])
-        self.assertIn("fresh lease", recovery["guidance"])
+        self.assertTrue(recovery["reacquire_without_new_authorization"])
+        self.assertIn("authorized internally", recovery["guidance"])
         self.assertIn("continuation prompt", recovery["guidance"])
         self.assertIn("不会自动重放", recovery["example_request_zh"])
 

@@ -2,5 +2,5 @@
 
 from pathlib import Path
 
-ADAPTER_VERSION = "0.2.5"
+ADAPTER_VERSION = "0.3.0"
 DEFAULT_SOCKET = Path("/tmp/shared-terminal-bridge.sock")
