@@ -1,6 +1,15 @@
 # 更新日志
 
-## 尚未发布
+## v0.3.1 — 2026-10-21
+
+配套 STB v0.17.0，保持 model-tasks-v2 和一次请求一次进程的调用方式，不增加模型侧授权步骤。更新后新启动的 Adapter 进程直接使用新代码；Core 修复需重启 Bridge。
+
+- 精简及完整 bootstrap 增加 Git/systemctl 禁用分页的短提示；分页识别与自动退出完全留在 Core，不复制到 Adapter。
+- 不引入 Jev／小模型或 Terminal 保活处理。
+
+- interrupt 透传可选 wait_ms，默认在 Core 等待提示符返回；CLI 支持 --seconds（默认 600）。RDC 收集超时只读取原 PID 输出，不再次输入中断请求。
+
+- 中断引导明确 accepted 不等于目标程序退出；新 Core 返回 termination_confirmed，未确认时继续观察原 job，不提交下一条命令。保持 Adapter 透传，不新增本地中断状态机。
 
 - 文档改为 guides/reference/development/validation/history 五层；重写当前架构与回归入口，日期记录进入 history/changes，旧路径引用及手册目录同步更新。
 

@@ -43,8 +43,9 @@ def dispatch_frame(frame, client):
             raise ValueError("bootstrap lines must be an integer from 1 to 100")
         return model_view(bootstrap(client, session, lines, detailed))
     if frame.get("op") == "interrupt":
-        if "session" in frame or set(params) != {"job_id"}:
-            raise ValueError("Job interrupt accepts only params.job_id")
+        if ("session" in frame or "job_id" not in params
+                or set(params) - {"job_id", "wait_ms"}):
+            raise ValueError("Job interrupt accepts params.job_id and optional wait_ms")
         return model_view(client.call("terminal_interrupt_job", params))
     method = OPERATIONS.get(frame.get("op"))
     if method is None:

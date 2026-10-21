@@ -213,7 +213,7 @@ STB 命令执行期间，人按 `Ctrl+C` 后，当前 job 返回 `INTERRUPTED_BY
 
 ## 当前状态
 
-当前版本为 `0.3.0`，配套 STB v0.16.0。模型使用 run/job ID，内部授权、持久去重、job 隔离与人工中断由 Core 校验。真实 ChatGPT/RDC 已验证新版 bootstrap/run 查询；完整验证范围与限制见[验证记录](docs/validation/README.md)。旧 lease/send/submit/generation 模型契约不兼容。
+当前版本为 `0.3.1`，配套 STB v0.17.0。模型使用 run/job ID；中断等待、内部授权、持久去重、分页退出与人工中断由 Core 处理。真实 ChatGPT/RDC 已验证新版 bootstrap/run 查询；完整验证范围与限制见[验证记录](docs/validation/README.md)。旧 lease/send/submit/generation 模型契约不兼容。
 
 STB-RDC 仍是薄 Adapter：它不复制 STB 的 Human Event Layer，不实现独立 lease，也不直接操作 tmux。后续演进应继续优先增强宿主 capability filtering、结构化错误和更稳定的远程工具协议，而不是把安全逻辑搬到 Adapter 中。
 

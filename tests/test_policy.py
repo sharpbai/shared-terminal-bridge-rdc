@@ -5,6 +5,18 @@ from tests.fakes import FakeBridgeClient
 
 
 class PolicyTests(unittest.TestCase):
+    def test_pager_guidance_in_compact_and_detailed_discovery(self):
+        from stb_rdc.policy import compact_policy
+        for policy in (compact_policy(), interaction_policy()):
+            for hint in ('git --no-pager', 'GIT_PAGER=cat', 'systemctl --no-pager',
+                         '(END)', 'do not change global'):
+                self.assertIn(hint, policy['command_output'])
+
+    def test_interrupt_requires_exit_evidence_not_just_acceptance(self):
+        from stb_rdc.policy import compact_policy
+        self.assertIn('termination_confirmed=false', compact_policy()['retry_wait'])
+        self.assertIn('termination_confirmed', interaction_policy()['command_transport']['guidance'])
+
     def test_stdin_lifecycle_is_one_shot_with_fast_pid_return(self):
         policy = interaction_policy()["command_transport"]
         self.assertEqual(policy["startup_timeout_ms"], 1)

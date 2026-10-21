@@ -9,6 +9,18 @@ from tests.test_stdio_run import RunClient
 
 
 class ModelContractTest(unittest.TestCase):
+    def test_interrupt_forwards_budget_and_preserves_exit_confirmation(self):
+        client, output = RunClient(), io.StringIO()
+        client.call = lambda method, params=None: (client.calls.append((method, params)) or {
+            'job_id': 'one', 'state': 'INTERRUPTED_BY_AGENT',
+            'termination_confirmed': True, 'output_excerpt': {'content': '^C\nprompt$ '}})
+        frame = dict(id='interrupt', op='interrupt', params={'job_id': 'one', 'wait_ms': 4000})
+        serve(io.StringIO(json.dumps(frame) + '\n'), output, client)
+        self.assertEqual(client.calls, [('terminal_interrupt_job', frame['params'])])
+        result = json.loads(output.getvalue())['result']
+        self.assertTrue(result['termination_confirmed'])
+        self.assertEqual(result['state'], 'INTERRUPTED_BY_AGENT')
+
     def test_old_operations_and_authority_injection_are_rejected(self):
         for op, params in [("lease", {}), ("submit", {"text": "echo x"}),
                            ("run", {"text": "echo x", "generation": 7}),

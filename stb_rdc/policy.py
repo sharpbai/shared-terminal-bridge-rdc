@@ -7,6 +7,12 @@ from .config import ADAPTER_VERSION
 
 PROTOCOL_REVISION = "model-tasks-v2"
 
+PAGER_GUIDANCE = (
+    "Disable pagers for command output: use git --no-pager ... or GIT_PAGER=cat, "
+    "and systemctl --no-pager ... to avoid getting stuck at (END). "
+    "Bound output where practical; do not change global target configuration."
+)
+
 
 def request_templates(name, supports_run=False):
     """Small actionable contract; placeholders must come from actual responses."""
@@ -33,6 +39,7 @@ def interaction_policy() -> dict[str, Any]:
     return {
         "human_primary": True,
         "bootstrap_first": True,
+        "command_output": PAGER_GUIDANCE,
         "bootstrap_is_discovery_only": True,
         "execution_path_required": "RDC -> stb-rdc -> STB -> tmux",
         "command_transport": {
@@ -52,7 +59,10 @@ def interaction_policy() -> dict[str, Any]:
                         "Startup timeout_ms MUST be 1 (one millisecond), never 1000 or 3000. "
                         "Only the following input/output collection may use timeout_ms=3000. "
                         "The receiver flushes its response and exits; use a new process per request. "
-                        "Use interrupt op for Ctrl+C, not escaped control bytes. "
+                        "Use interrupt op for Ctrl+C, not escaped control bytes. accepted only "
+                        "means requested; interrupt waits for prompt return by default (600000ms; "
+                        "optional wait_ms). Check termination_confirmed. If false, observe the job "
+                        "and do not submit another command or claim it stopped. "
                         "A running wait does not prevent a separate request for control/status. "
                         "A timeout does not authorize a new submit ID.",
         },
@@ -118,10 +128,11 @@ def compact_terminal(raw: dict[str, Any]) -> dict[str, Any]:
 def compact_policy():
     """Minimum complete runtime rules; detailed explanations remain opt-in."""
     return {
+        "command_output": PAGER_GUIDANCE,
         "startup_request": {"command": "stb-rdc serve-stdio", "timeout_ms": 1},
         "transport": "Immediately send one newline-terminated JSON via interact_with_process; collect with timeout_ms=3000. One response then exit; never reuse PID. Never put target commands in startup arguments. Single-line commands only; use interrupt for Ctrl+C.",
         "authority": "Core handles authorization. Human Ctrl+C during execution stops the old chain: never replay canceled steps. New calls may renew internally. High-risk/destructive/privileged/service/network changes require explicit approval; honor Core ACL and risk decisions.",
-        "retry_wait": "Retry identical logical request ID and command parameters, never submit a new ID on transport timeout. wait timeout or canceled observation does not stop the job; use job/wait to observe, input/interrupt only with its job ID.",
+        "retry_wait": "Retry identical logical request ID and command parameters, never submit a new ID on transport timeout. wait timeout or canceled observation does not stop the job; use job/wait to observe, input/interrupt only with its job ID. Interrupt waits for prompt by default (600000ms, optional wait_ms); if termination_confirmed=false, observe the job, do not submit another command. Read the existing PID after RDC collection timeout; never repeat the interrupt input.",
         "exclusive_mode": "Target operations only through STB. No independent RDC shell/filesystem or tmux send-keys bypass. Missing capability: fail closed; bypass requires explicit one-shot scoped human approval and cannot evade Human Override, ACL or risk approval.",
     }
 

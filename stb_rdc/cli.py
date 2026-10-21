@@ -40,6 +40,8 @@ def build_parser() -> argparse.ArgumentParser:
 
     interrupt_parser = commands.add_parser("interrupt")
     interrupt_parser.add_argument("job_id")
+    interrupt_parser.add_argument("--seconds", type=int, default=600,
+                                  help="Wait for prompt return, 1–600 seconds (default 600)")
     return parser
 
 
@@ -71,7 +73,8 @@ def dispatch(args: argparse.Namespace, client: BridgeClient) -> dict[str, Any]:
     if args.command == "job":
         return client.call("terminal_job_status", {"job_id": args.job_id})
 
-    return client.call("terminal_interrupt_job", {"job_id": args.job_id})
+    return client.call("terminal_interrupt_job", {"job_id": args.job_id,
+                                                  "wait_ms": args.seconds * 1000})
 
 
 def run(

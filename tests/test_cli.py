@@ -44,7 +44,7 @@ class CliTests(unittest.TestCase):
         run(["interrupt", "job-1"], client)
         self.assertEqual(
             client.calls[-1],
-            ("terminal_interrupt_job", {"job_id": "job-1"}),
+            ("terminal_interrupt_job", {"job_id": "job-1", "wait_ms": 600000}),
         )
 
     def test_job_reads_status_without_session_or_lease(self) -> None:

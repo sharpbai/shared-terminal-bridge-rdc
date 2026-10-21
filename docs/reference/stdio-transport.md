@@ -29,7 +29,7 @@ Core 内部授权、提交并等待，返回 job ID、状态和有界结果。�
 | run | session 或 pane、命令及逻辑 ID；Core 执行并等待 |
 | wait / job | job_id；继续观察原任务 |
 | input | job_id，text 或 key 二选一；Envelope id 用于输入去重 |
-| interrupt | 仅 job_id；Agent Ctrl+C，不伪装 Human 事件 |
+| interrupt | job_id，可选 wait_ms；Agent Ctrl+C 并等待提示符，不伪装 Human 事件 |
 | approve | 审批 request_id；必须先取得明确人工批准，不自动执行 |
 | context / state | session 或 pane，只读观察 |
 | info / sessions | 发现能力或受管会话 |
@@ -43,6 +43,8 @@ Envelope 为 `id`、`op`、可选 session、可选对象 params。所有 id 都�
 RDC 远程单次收集最多约 3 秒；较长 run/wait 在接收进程中继续等待，随后读取该 PID 输出，不能重复输入或重交命令。Core 检查点返回后，使用 job/wait 继续观察。
 
 Human Ctrl+C 取消旧执行链，不允许自动重放；之后的新明确 run 可继续。取消等待不等于停止任务。检查点和超时不是执行失败，也不授权自动发送 Ctrl+C。高风险操作仍需批准。
+
+Agent interrupt 默认在同次调用中发键并等待提示符，wait_ms 默认 600000，可选 1–600000；人工 CLI 为 `stb-rdc interrupt JOB_ID --seconds 600`。RDC 收集窗口不足时继续读取该 PID 输出，不重新输入中断请求。新 Core 返回 termination_confirmed：提示符确认后为 INTERRUPTED_BY_AGENT；超时或取消观察时，accepted 不能当成结束，仍需 job/wait，不提交新命令、不绕过检查。旧 Core 没有确认字段时也不能将 accepted 当成结束。不自动补发 Ctrl+C 或升级 kill。
 
 一进程只处理一条换行结尾 JSON。空 EOF 无输出退出；损坏、超长（1 Mi 字符）或不完整请求输出错误后退出；第二条请求不会执行。JSON 不额外反转义，真实多行执行仍禁用，控制键不作为命令文本注入。响应过滤内部元数据，不改写终端命令或输出字符串。
 
