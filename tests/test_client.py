@@ -11,7 +11,7 @@ class ClientTests(unittest.TestCase):
 
     def test_unknown_session_fails_closed(self) -> None:
         client = FakeBridgeClient()
-        with self.assertRaisesRegex(BridgeError, "managed session not found"):
+        with self.assertRaisesRegex(BridgeError, "会话不存在"):
             client.session("missing")
 
 

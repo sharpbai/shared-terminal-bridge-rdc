@@ -1,6 +1,6 @@
 """Keep internal authority bookkeeping out of the default model response.
 
-Core retains raw state/audit; legacy CLI remains available for diagnostics.
+Core retains raw state/audit; internal authority fields stay hidden from Agents.
 Never rewrite command/output strings: only filter structural metadata fields.
 """
 

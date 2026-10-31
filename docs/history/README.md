@@ -1,9 +1,11 @@
 # STB-RDC 演进记录
 
-日常用法见 [快速上手](../guides/getting-started.md)，当前格式见 [JSONL 契约](../reference/stdio-transport.md)。以下是历史证据，不复制旧命令执行。
+日常用法见 [快速上手](../guides/getting-started.md)，当前格式见 [任务调用契约](../reference/stdio-transport.md)。以下是历史证据，不复制旧命令执行。
 
 | 日期 | 记录 |
 | --- | --- |
+| 2026-10-31 | [CLI 入口与 RDC workflow 最终整理](changes/2026-10-31-cli-workflow.md) |
+| 2026-10-31 | [分阶段验证与旧入口迁移记录](changes/2026-10-31-validation-stages.md) |
 | 2026-10-19 | [精简发现、两轮性能对比与 v0.3.0 发布](changes/2026-10-19-discovery-performance-release.md) |
 | 2026-10-18 | [复杂命令转义、JSONL 和单请求退出演进](changes/2026-10-18-jsonl-transport.md) |
 

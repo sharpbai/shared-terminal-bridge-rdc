@@ -9,7 +9,8 @@ from contextlib import redirect_stderr
 from stb_rdc.client import BridgeClient, BridgeError
 from stb_rdc.errors import bridge_failure
 from stb_rdc.cli import main
-from stb_rdc.policy import interaction_policy
+from stb_rdc.policy import bootstrap
+from tests.fakes import RunClient
 
 
 class ProvenanceTests(unittest.TestCase):
@@ -26,7 +27,7 @@ class ProvenanceTests(unittest.TestCase):
         except BridgeError as error:
             e = error
         self.assertIsNotNone(e)
-        self.assertEqual(e.code, "MANAGED_SESSION_NOT_FOUND")
+        self.assertEqual(e.code, "SESSION_NOT_MANAGED")
 
     def test_transport_error_is_not_stb_denial(self):
         class DownSocket:
@@ -45,15 +46,14 @@ class ProvenanceTests(unittest.TestCase):
         stderr = io.StringIO()
         with patch("stb_rdc.cli.BridgeClient", return_value=Denied()):
             with redirect_stderr(stderr), self.assertRaises(SystemExit):
-                main(["status"])
+                main(["list"])
         self.assertEqual(json.loads(stderr.getvalue())["error"]["code"],
                          "PANE_ACCESS_DENIED")
 
     def test_policy_does_not_claim_upstream_observability(self):
-        p = interaction_policy()
-        self.assertIn("before adapter starts", p["error_provenance"]["upstream"])
-        self.assertEqual(p["authorization_granularity"],
-                         "task_or_risk_boundary_not_each_command")
+        p = bootstrap(RunClient(), "verify33", detailed=True)["diagnostics"]
+        self.assertIn("适配层启动前", p["error_provenance"]["upstream"])
+        self.assertNotIn("authorization_granularity", p)
 
 
 if __name__ == "__main__":

@@ -1,5 +1,25 @@
 # 更新日志
 
+## Unreleased
+
+暂无。
+
+## v0.4.0 — 2026-10-31
+
+配套 STB v0.18.0。不兼容删除旧 stdio/input 及能力协商输出；Adapter 新进程直接使用新代码，Core instructions 需重启 Bridge 后加载，MCP 工具需重连刷新。真实 ChatGPT/RDC 新版业务全链路尚未重新验收。
+
+以下为最终实现；中间 stdio/input/ready 方案不作为发布接口。调整过程见[2026-10-31 记录](docs/history/changes/2026-10-31-cli-workflow.md)。
+
+- Agent CLI 为 list/info/bootstrap/context/run/job/wait/interrupt；删除 status、serve-stdio、input、旧授权/审批入口，不保留旧模型调用回退。
+- run 仅支持 --text 或 --base64 PAYLOAD：超过 200 个 Unicode 字符或含引号、反斜杠、反引号、美元符时使用工具编码并回验的 Base64，禁止手算；严格检查 UTF-8、标准 Base64、单行和 65536 字节边界。
+- RDC 一次 start_process(timeout_ms=1) 启动即提交，不使用 interact_with_process 输入。未收齐结果继续 read_process_output 原 PID，不重提；PID 与 job_id 分开，后续操作新进程。
+- workflow 独立到 stb_rdc/workflow.py，所有工具调用示例使用 tool/arguments，明确参数替换、数字 PID、offset=0 和多设备 deviceId；覆盖观察、run、结果分支、job/wait/interrupt，不将旧任务查询作为接入前置。
+- bootstrap 默认 40 行，Core instructions 是唯一通用规则来源；只保留 RDC 专属传输说明，命令用途与模板合并。删除 ready/协议协商/内部能力标志，失败直接报错；版本与错误来源仅在 --detailed 中附加。
+- bootstrap 不携带旧 context.execution 中断历史，有活动任务才附最小摘要；context 刷新和权威任务结果保留原语义。run 不再额外查询 bridge_info 做兼容预检查，不自动重试。
+- run/wait/interrupt CLI 默认观察 60 秒；wait 模板明确 --seconds 60，可设 1–600 秒，观察超时不停止目标任务，与 RDC timeout_ms 不同。
+- Agent 仅提交非交互 CLI 任务；交互提示/TUI 请人工操作，不通过新 run 回复。高风险通过对话确认；Adapter 不复制 Core 授权、去重、中断或审批状态机。
+- 当前指南、架构、开发地图、回归步骤按最终实现更新；分阶段验证证据归入历史。不把本机测试或参数模板检查宣称为真实 ChatGPT/RDC 业务全链路验收。
+
 ## v0.3.1 — 2026-10-21
 
 配套 STB v0.17.0，保持 model-tasks-v2 和一次请求一次进程的调用方式，不增加模型侧授权步骤。更新后新启动的 Adapter 进程直接使用新代码；Core 修复需重启 Bridge。

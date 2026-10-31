@@ -4,12 +4,17 @@ STB-RDC 是 ChatGPT Instant 经 RDC 调用本地 STB 的薄适配层。目标是
 
 ## 先读哪里
 
-运行任务首次接入优先一次只读 `stb-rdc bootstrap SESSION`；也支持 stdin bootstrap。返回已有 context/policy/templates 时不重复发现或例行读取完整文档，终端刷新用 context。目标命令仍只走 stdin。开发修改仍按下列代码地图定位。
+首次接入用 stb-rdc bootstrap SESSION，已有画面和引导时不重复发现；开发时按下方代码地图定位。
+
+简单命令用 `stb-rdc run SESSION --text 'df -h /'`；复杂命令用工具按 UTF-8 编码并回验后调用 `stb-rdc run SESSION --base64 PAYLOAD`。不手算、不添加首尾换行，仅单行。启动即提交，不使用 stdin。RDC 启动 timeout_ms=1，结果未收齐读取原 PID，不重提。
+
+选择标准：命令不超过 200 个 Unicode 字符且不含引号、反斜杠、反引号或美元符时优先 --text；否则 --base64。用可靠工具按 UTF-8 编码为无折行标准 Base64 并解码回验，不添加首尾换行，不手算。
 
 - 命令参数或 API 映射：`stb_rdc/cli.py`
-- RDC JSONL 数据通道：`stb_rdc/stdio.py`（命令内容不可拼入启动 Shell）
-- stdin 接收进程一次请求后退出；RDC `start_process(timeout_ms=1)` 后立即输入，不复用 PID、不引入常驻 worker。
+- UTF-8 Base64 解码与单行边界：`stb_rdc/command_input.py`。
 - Unix socket 与错误处理：`stb_rdc/client.py`
+- Bootstrap 只读汇总 Core instructions、RDC transport/workflow 与用途+模板合并的 commands；--detailed 只加诊断，不维护第二套安全规则。成功即返回完整引导，不协商协议版本或能力标志；说明缺失或 API 调用失败直接报错。run 不额外查询 bridge_info，不自动重试。当前 pane 有执行任务才附带最小 current_jobs，不输出完整任务历史。
+- 完整操作路径与 RDC --text/--base64 启动和结果收集：`stb_rdc/workflow.py`；启动即提交，不通过 interact_with_process 输入。
 - Bootstrap 和交互约束：`stb_rdc/policy.py`
 - 版本和默认 socket：`stb_rdc/config.py`
 - 使用方式：`README.md`、`docs/guides/getting-started.md`
@@ -25,10 +30,12 @@ STB-RDC 是 ChatGPT Instant 经 RDC 调用本地 STB 的薄适配层。目标是
 - Bootstrap 只发现，不申请 lease，不执行用户任务。
 - daemon 支持时普通执行优先 `run`；Adapter 只映射一个 Core 请求，不本地串联授权/提交/等待。启动 timeout_ms 必须显式为 1 毫秒；输入结果收集 timeout 与其分开。
 - Wait 超时不等于 job 失败；Human Override 停止当次执行链，不强制结束模型回合。
-- 执行期间人工 Ctrl+C 停止旧链；之后新明确调用按 Bridge 本地接收顺序内部续授权。模型不读取或传 generation；旧调用内部后续步骤不得重放，高风险仍批准，不用 RDC 绕过决策。
-- 模型接口只用 run、job ID 和审批请求 ID；旧 lease/send/generation 契约已移除，不保留兼容回退。
+- 执行期间人工 Ctrl+C 停止旧链；之后新明确调用按 Bridge 本地接收顺序内部续授权。模型不读取或传 generation；旧调用内部后续步骤不得重放，高风险由模型通过对话确认，不用 RDC 绕过决策。
+- 模型接口只用 run、job ID ；旧 lease/send/generation 契约已移除，不保留兼容回退。
 
 ## 修改原则
+
+- JSON 中面向 Agent 的说明文案统一中文；字段名、协议标签、状态码、命令模板及终端原文不翻译，避免破坏调用和结果判断。
 
 - 文档按 guides/reference/development/validation/history 分层；按日记录放 history/changes，当前协议只维护 reference。移动页面同时更新 README、代码导航和手册目录。
 

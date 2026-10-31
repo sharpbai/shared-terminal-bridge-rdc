@@ -52,11 +52,4 @@ class BridgeClient:
         return response["result"]
 
     def session(self, name: str) -> dict[str, Any]:
-        sessions = self.call("terminal_session_list").get("sessions", [])
-        for managed_session in sessions:
-            if managed_session["name"] == name:
-                return managed_session
-        raise BridgeError(
-            f"managed session not found: {name}", layer="adapter",
-            code="MANAGED_SESSION_NOT_FOUND"
-        )
+        return self.call("terminal_session_resolve", {"name": name})

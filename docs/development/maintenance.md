@@ -11,12 +11,13 @@ STB-RDC 由 ChatGPT 的轻量级 Instant 会话经 RDC 调用，并配合 GitHub
 | `stb-rdc` | 兼容入口和软链接路径解析 |
 | `stb_rdc/config.py` | 唯一版本号、默认 socket |
 | `stb_rdc/client.py` | Unix socket JSON 协议、Bridge 错误、session 解析 |
-| `stb_rdc/policy.py` | Interaction Policy、上下文裁剪、discovery bootstrap |
+| `stb_rdc/policy.py` | bootstrap 汇总、输入选择引导、上下文裁剪 |
+| `stb_rdc/workflow.py` | 完整 RDC 操作路径、tool/arguments 参数模板、PID/deviceId 绑定 |
 | `stb_rdc/cli.py` | 参数解析与 STB API 的直接映射 |
-| `stb_rdc/stdio.py` | 一次性 JSONL 请求映射，bootstrap/run 能力发现与入口 |
+| `stb_rdc/command_input.py` | 严格 Base64 解码、UTF-8 和单行校验；无 stdin 接收模式 |
 | `tests/` | 无真实 RDC/STB/tmux 依赖的契约测试 |
 
-如果修改命令参数，只读 `cli.py` 和相应测试；修改 socket 错误，只读 `client.py`；修改模型指导，只读 `policy.py`。跨模块语义变化才需要同时阅读架构文档。
+如果修改命令参数，只读 `cli.py` 和相应测试；修改 socket 错误，只读 `client.py`；修改输入选择或 bootstrap，只读 `policy.py`；修改 RDC 工具调用路径，只读 `workflow.py`。跨模块语义变化才需要同时阅读架构文档。
 
 ## 本地检查
 

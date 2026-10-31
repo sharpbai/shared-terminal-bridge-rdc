@@ -1,11 +1,13 @@
 # STB-RDC 文档入口
 
-Agent 首次使用直接 `stb-rdc bootstrap SESSION`，按返回契约继续；无需先读这些文档。此目录供人阅读、排障和开发。
+2026-10-31 发版整理：[2026-10-31 CLI 与 RDC workflow 整理](history/changes/2026-10-31-cli-workflow.md)；当前调用方式见任务协议，不以阶段记录代替参数说明。
+
+Agent 首次使用直接 `stb-rdc bootstrap SESSION`，按返回操作引导继续；无需先读这些文档。此目录供人阅读、排障和开发。
 
 | 目的 | 页面 |
 | --- | --- |
 | 安装、首次接入、日常使用 | [快速上手](guides/getting-started.md) |
-| 请求格式、启动/退出和重试 | [JSONL 调用契约](reference/stdio-transport.md) |
+| 请求格式、启动/退出和重试 | [任务调用契约](reference/stdio-transport.md) |
 | 组件职责与安全边界 | [架构](reference/architecture.md) |
 | 判断错误来自哪里 | [错误归因](reference/error-provenance.md) |
 | 定位代码、测试和提交 | [开发维护](development/maintenance.md) |

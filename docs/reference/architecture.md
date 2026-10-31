@@ -13,19 +13,19 @@ ChatGPT → RDC → stb-rdc → STB Core → 共享 tmux pane
 | 组件 | 职责 | 不负责 |
 | --- | --- | --- |
 | ChatGPT | 理解意图、选择目标、解释风险、根据输出决策 | 自报授权计数或伪造宿主身份 |
-| RDC | 设备发现、启动 Adapter、传输 stdin/stdout | 绕过 STB 操作目标主机 |
-| Adapter | session 解析、bootstrap、JSONL 映射、有界响应 | 直接操作 tmux、复制授权或任务状态机 |
+| RDC | 设备发现、启动 Adapter、传输启动参数与输出 | 绕过 STB 操作目标主机 |
+| Adapter | 会话解析、bootstrap、文本/Base64 解码、有界响应 | 直接操作 tmux、复制授权或任务状态机 |
 | Core | Pane ACL、接收顺序、内部授权、持久去重、job/wait、人工事件、审计 | 替用户判断所有业务风险 |
 | tmux | 真实 Shell、可见输入输出、历史和人工按键 | 为模型创建独立隐藏环境 |
 
 ## 发现与执行
 
 1. 一次只读 bootstrap 返回能力、上下文、规则及模板，不取得执行权限。
-2. 模型通过 stdin 提交 run，逻辑 ID 用于重试去重；Core 内部授权、输入可见命令并等待。
-3. run 返回 job ID、状态和有界输出；后续 wait/job/input/interrupt 使用该 job。
+2. 模型通过 run --text 或 --base64 一次启动提交；Core 生成 ID、内部授权、执行和等待。
+3. run 返回 job ID、状态和有界输出；后续 wait/job/interrupt 使用该 job。
 4. Adapter 一请求一响应后退出；长等待仍发生在 Core，不能因 RDC 收集窗口结束而重交命令。
 
-操作参数和生命周期只维护在 [JSONL 契约](stdio-transport.md)。
+操作参数和生命周期只维护在 [任务调用契约](stdio-transport.md)。
 
 ## 人工控制与失败边界
 

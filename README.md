@@ -134,7 +134,7 @@ Adapter 没有第三方 Python 依赖，通过 STB 默认 Unix socket 工作。
 ### 2. 检查连接
 
 ```bash
-python3 ./stb-rdc status
+python3 ./stb-rdc list
 ```
 
 返回 Adapter、Bridge、托管 session 和 Interaction Policy 后，说明远程链路已经可用。
@@ -149,14 +149,13 @@ python3 ./stb-rdc bootstrap verify33 --lines 40
 
 ### 4. 观察和执行
 
-ChatGPT 经 RDC 提交命令时，优先使用 [JSONL 标准输入通道](docs/reference/stdio-transport.md)：以 `timeout_ms=1` 固定启动 `stb-rdc serve-stdio`，取得 PID 后立即用 `interact_with_process` 输入一条 JSON。程序输出结果后退出，每次请求重新启动，不复用 PID。不要把目标命令拼入 RDC 启动字符串。下列 CLI 保留供人工兼容使用。
+简单命令用 `stb-rdc run SESSION --text 'df -h /'`；复杂命令用工具按 UTF-8 编码并回验后调用 `stb-rdc run SESSION --base64 PAYLOAD`。不手算、不添加首尾换行，仅单行。启动即提交，不使用 stdin。RDC 启动 timeout_ms=1，结果未收齐读取原 PID，不重提。
 
 ```bash
 python3 ./stb-rdc context verify33 --lines 40
 python3 ./stb-rdc wait JOB_ID --seconds 60
 ```
 
-命令执行使用 stdin 的 `run` 模板；无需申请租约或传递授权计数。后续观察、交互与中断使用实际返回的 job ID。旧 CLI lease/send 和旧 stdin submit 不再兼容。
 
 完整的准备、命令说明和故障排查见[快速上手](docs/guides/getting-started.md)。
 
@@ -213,7 +212,7 @@ STB 命令执行期间，人按 `Ctrl+C` 后，当前 job 返回 `INTERRUPTED_BY
 
 ## 当前状态
 
-当前版本为 `0.3.1`，配套 STB v0.17.0。模型使用 run/job ID；中断等待、内部授权、持久去重、分页退出与人工中断由 Core 处理。真实 ChatGPT/RDC 已验证新版 bootstrap/run 查询；完整验证范围与限制见[验证记录](docs/validation/README.md)。旧 lease/send/submit/generation 模型契约不兼容。
+当前版本为 `0.4.0`，配套 STB v0.18.0。run 支持 --text 或工具编码的 --base64，RDC 一次启动提交并读取原 PID；删除 stdio/input 和旧能力协商。授权、去重、分页退出与人工中断由 Core 处理。真实 ChatGPT/RDC 新版业务全链路尚未重新验收，范围见[验证记录](docs/validation/README.md)。升级 Core 后重启 Bridge，MCP 需重连刷新。
 
 STB-RDC 仍是薄 Adapter：它不复制 STB 的 Human Event Layer，不实现独立 lease，也不直接操作 tmux。后续演进应继续优先增强宿主 capability filtering、结构化错误和更稳定的远程工具协议，而不是把安全逻辑搬到 Adapter 中。
 
@@ -239,7 +238,7 @@ ln -sfn /Users/sharpbai/Documents/ChatGPT/IT网管/shared-terminal-bridge-rdc/st
 
 ```bash
 command -v stb-rdc
-stb-rdc status
+stb-rdc list
 ```
 
 如果 `command -v stb-rdc` 没有返回路径，需要先把安装目录加入 shell 的 `PATH`。RDC 调用环境也必须能解析到同一个命令，否则新会话可能出现 `stb-rdc: command not found`。
