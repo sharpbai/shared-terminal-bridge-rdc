@@ -32,12 +32,22 @@ stb-rdc interrupt JOB_ID
 
 这些占位符必须替换成实际 session/job ID。interrupt 会影响该运行任务，不能当成只读探测。仅看历史或状态不取得执行权限。
 
+## 在 RDC 中提交复杂命令
+
+用 bootstrap 的 Python 示例生成短段和摘要数组。按顺序把数组元素作为独立参数填入下面的命令，调用一次 `start_process`，设 `timeout_ms=1`。
+
+```text
+stb-rdc run SESSION --base64-chunks CHUNK1 CHUNK2 DIGEST16
+```
+
+输出未收齐时，用 `read_process_output` 读取原 PID。已有 job ID 且任务仍运行时，用 `stb-rdc wait JOB_ID --seconds 60` 继续观察。摘要或格式错误发生在提交 Core 之前，保留原始报错并核对编码工具输出。完整参数示例见[任务调用协议](../reference/stdio-transport.md)。
+
 ## 排障
 
 - 找不到命令：核对 PATH 或使用已确认的 Adapter 绝对路径；不要把复杂原文嵌入启动 Shell。
 - Core 能力缺失：重启/升级 Bridge；不要拆回旧授权步骤。
 - 状态不明或响应丢失：读取原 PID 或查询已返回的 job ID，不盲目重新 run。
-- 旧任务不可交互：观察当前终端，新任务用新 run；不把旧 job 绑定到新任务。
+- 旧任务仍显示 RUNNING：用 `context SESSION` 看提示符，用 `info SESSION` 核对当前 pane 和 job ID。确认前台命令已结束后，由本机操作者按 pane 清理，重查占用状态再提交。详见 [STB 管理手册](https://github.com/sharpbai/shared-terminal-bridge/blob/master/docs/guides/managed-sessions.md)。
 - 高风险操作：先通过对话取得人工同意；不再调用审批命令。
 
 STB-RDC 用户任务只走 STB。独立 RDC 文件、进程和 Shell 操作需要另行一次性明确旁路授权。
