@@ -21,7 +21,7 @@ ChatGPT → RDC → stb-rdc → STB Core → 共享 tmux pane
 ## 发现与执行
 
 1. 一次只读 bootstrap 返回能力、上下文、规则及模板，不取得执行权限。
-2. 模型通过 run --text 或 --base64 一次启动提交；Core 生成 ID、内部授权、执行和等待。
+2. 模型通过 run --text 或 --base64-chunks 一次启动提交；Core 生成 ID、内部授权、执行和等待。
 3. run 返回 job ID、状态和有界输出；后续 wait/job/interrupt 使用该 job。
 4. Adapter 一请求一响应后退出；长等待仍发生在 Core，不能因 RDC 收集窗口结束而重交命令。
 

@@ -6,15 +6,15 @@ STB-RDC 是 ChatGPT Instant 经 RDC 调用本地 STB 的薄适配层。目标是
 
 首次接入用 stb-rdc bootstrap SESSION，已有画面和引导时不重复发现；开发时按下方代码地图定位。
 
-简单命令用 `stb-rdc run SESSION --text 'df -h /'`；复杂命令用工具按 UTF-8 编码并回验后调用 `stb-rdc run SESSION --base64 PAYLOAD`。不手算、不添加首尾换行，仅单行。启动即提交，不使用 stdin。RDC 启动 timeout_ms=1，结果未收齐读取原 PID，不重提。
+简单命令用 `stb-rdc run SESSION --text 'df -h /'`；复杂命令用工具按 bootstrap 生成 Base64 分段与摘要后调用 `stb-rdc run SESSION --base64-chunks CHUNK1 ... DIGEST16`。不手算、不添加首尾换行，仅单行。启动即提交，不使用 stdin。RDC 启动 timeout_ms=1，结果未收齐读取原 PID，不重提。
 
-选择标准：命令不超过 200 个 Unicode 字符且不含引号、反斜杠、反引号或美元符时优先 --text；否则 --base64。用可靠工具按 UTF-8 编码为无折行标准 Base64 并解码回验，不添加首尾换行，不手算。
+选择标准：命令不超过 200 个 Unicode 字符且不含引号、反斜杠、反引号或美元符时优先 --text；否则 --base64-chunks。用 bootstrap 脚本生成短段与摘要，不添加首尾换行，不手算。
 
 - 命令参数或 API 映射：`stb_rdc/cli.py`
 - UTF-8 Base64 解码与单行边界：`stb_rdc/command_input.py`。
 - Unix socket 与错误处理：`stb_rdc/client.py`
 - Bootstrap 只读汇总 Core instructions、RDC transport/workflow 与用途+模板合并的 commands；--detailed 只加诊断，不维护第二套安全规则。成功即返回完整引导，不协商协议版本或能力标志；说明缺失或 API 调用失败直接报错。run 不额外查询 bridge_info，不自动重试。当前 pane 有执行任务才附带最小 current_jobs，不输出完整任务历史。
-- 完整操作路径与 RDC --text/--base64 启动和结果收集：`stb_rdc/workflow.py`；启动即提交，不通过 interact_with_process 输入。
+- 完整操作路径与 RDC --text/--base64-chunks 启动和结果收集：`stb_rdc/workflow.py`；启动即提交，不通过 interact_with_process 输入。
 - Bootstrap 和交互约束：`stb_rdc/policy.py`
 - 版本和默认 socket：`stb_rdc/config.py`
 - 使用方式：`README.md`、`docs/guides/getting-started.md`

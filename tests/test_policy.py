@@ -66,6 +66,7 @@ class PolicyTests(unittest.TestCase):
 
     def test_workflow_guides_complete_task_path(self):
         import base64
+        import hashlib
         import shlex
         from stb_rdc.cli import run
         workflow = rdc_workflow("verify33")
@@ -78,7 +79,7 @@ class PolicyTests(unittest.TestCase):
             start = workflow[mode]["call"]["arguments"]
             self.assertEqual(start["timeout_ms"], 1)
             self.assertNotIn("interact_with_process", workflow[mode])
-            argv = shlex.split(start["command"].replace("PAYLOAD", base64.b64encode(text.encode()).decode()))[1:]
+            argv = shlex.split(start["command"].replace("CHUNK1 CHUNK2 ... DIGEST16", base64.b64encode(text.encode()).decode() + " " + hashlib.sha256(text.encode()).hexdigest()[:16]))[1:]
             client = RunClient()
             run(argv, client)
             self.assertEqual([m for m, _ in client.calls], ["terminal_session_resolve", "terminal_run"])
@@ -94,7 +95,7 @@ class PolicyTests(unittest.TestCase):
 
     def test_input_selection_is_explicit_without_mcp_mixing(self):
         for term in ("200 个 Unicode 字符", "单引号", "双引号", "反斜杠",
-                     "反引号", "$", "其他情况用 --base64", "都是 run 的参数"):
+                     "反引号", "$", "其他情况用 stb-rdc run 会话名 --base64-chunks", "都是 run 的参数"):
             self.assertIn(term, COMMAND_GUIDANCE)
         self.assertNotIn("MCP", COMMAND_GUIDANCE)
 

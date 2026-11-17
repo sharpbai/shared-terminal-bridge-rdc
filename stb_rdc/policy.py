@@ -7,15 +7,15 @@ from .config import ADAPTER_VERSION
 from .workflow import rdc_workflow
 
 INPUT_SELECTION = (
-    "命令超过 200 个 Unicode 字符，或含单引号、双引号、反斜杠、反引号、$ 中任一字符时，使用 --base64；"
+    "命令超过 200 个 Unicode 字符，或含单引号、双引号、反斜杠、反引号、$ 中任一字符时，使用 --base64-chunks；"
     "其余短且简单的单行文本使用 --text。字符数按原文计算，不含 CLI 外层引用。"
 )
 
 COMMAND_GUIDANCE = INPUT_SELECTION + (
-    "执行命令使用 stb-rdc run 会话名，--text 与 --base64 PAYLOAD 二选一，都是 run 的参数。"
+    "执行命令使用 stb-rdc run 会话名，--text 与 --base64-chunks 二选一，都是 run 的参数。"
     "命令不超过 200 个 Unicode 字符，且不含单引号、双引号、反斜杠、反引号或 $ 时，"
-    "使用 stb-rdc run 会话名 --text '命令正文'；其他情况用 --base64 PAYLOAD，即 stb-rdc run 会话名 --base64 PAYLOAD。"
-    "使用会话代码执行工具按 UTF-8 编码为无折行标准 Base64，并解码逐字节回验；禁止模型手算或改写编码结果。工具不可用时报告，不改用 RDC 编码原文。仅单行、不添加首尾换行，Base64 不是加密。"
+    "使用 stb-rdc run 会话名 --text '命令正文'；其他情况用 stb-rdc run 会话名 --base64-chunks CHUNK1 ... DIGEST16。"
+    "按 workflow 用会话 Python 工具每 72 字节独立编码为标准 Base64，末尾附原始字节 SHA-256 前 16 个十六进制字符；禁止模型手算或改写编码结果。工具不可用时报告，不改用 RDC 编码原文。仅单行、不添加首尾换行，Base64 不是加密。"
 )
 EXCLUSIVE_GUIDANCE = (
     "目标操作只通过 STB，不用独立 RDC Shell、文件工具或 tmux send-keys 旁路。"
@@ -35,7 +35,7 @@ def command_guide(name: str) -> dict[str, Any]:
         "run": {"purpose": "执行新任务，默认观察 60 秒",
                 "input_selection": INPUT_SELECTION,
                 "direct": f"stb-rdc run {session} --text '命令正文'",
-                "base64": f"stb-rdc run {session} --base64 PAYLOAD"},
+                "base64": f"stb-rdc run {session} --base64-chunks CHUNK1 ... DIGEST16"},
         "interrupt": {"purpose": "发送 Agent Ctrl+C 并等待提示符；termination_confirmed=false 时继续观察，不发新命令或重复中断",
                       "command": "stb-rdc interrupt JOB_ID"},
     }

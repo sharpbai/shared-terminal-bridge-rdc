@@ -149,7 +149,7 @@ python3 ./stb-rdc bootstrap verify33 --lines 40
 
 ### 4. 观察和执行
 
-简单命令用 `stb-rdc run SESSION --text 'df -h /'`；复杂命令用工具按 UTF-8 编码并回验后调用 `stb-rdc run SESSION --base64 PAYLOAD`。不手算、不添加首尾换行，仅单行。启动即提交，不使用 stdin。RDC 启动 timeout_ms=1，结果未收齐读取原 PID，不重提。
+简单命令用 `stb-rdc run SESSION --text 'df -h /'`；复杂命令用工具按 UTF-8 编码并回验后调用 `stb-rdc run SESSION --base64-chunks CHUNK1 ... DIGEST16`。不手算、不添加首尾换行，仅单行。启动即提交，不使用 stdin。RDC 启动 timeout_ms=1，结果未收齐读取原 PID，不重提。
 
 ```bash
 python3 ./stb-rdc context verify33 --lines 40
@@ -212,7 +212,7 @@ STB 命令执行期间，人按 `Ctrl+C` 后，当前 job 返回 `INTERRUPTED_BY
 
 ## 当前状态
 
-当前版本为 `0.4.0`，配套 STB v0.18.0。run 支持 --text 或工具编码的 --base64，RDC 一次启动提交并读取原 PID；删除 stdio/input 和旧能力协商。授权、去重、分页退出与人工中断由 Core 处理。真实 ChatGPT/RDC 新版业务全链路尚未重新验收，范围见[验证记录](docs/validation/README.md)。升级 Core 后重启 Bridge，MCP 需重连刷新。
+当前版本为 `0.5.0`，配套 STB v0.19.0。run 支持 --text 或工具编码的 --base64-chunks，RDC 一次启动提交并读取原 PID；删除 stdio/input 和旧能力协商。授权、去重、分页退出与人工中断由 Core 处理。真实 ChatGPT/RDC 新版业务全链路尚未重新验收，范围见[验证记录](docs/validation/README.md)。升级 Core 后重启 Bridge，MCP 需重连刷新。
 
 STB-RDC 仍是薄 Adapter：它不复制 STB 的 Human Event Layer，不实现独立 lease，也不直接操作 tmux。后续演进应继续优先增强宿主 capability filtering、结构化错误和更稳定的远程工具协议，而不是把安全逻辑搬到 Adapter 中。
 

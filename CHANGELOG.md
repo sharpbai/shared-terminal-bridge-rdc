@@ -4,6 +4,13 @@
 
 暂无。
 
+## v0.5.0 — 2026-11-17
+
+配套 STB v0.19.0。
+
+- 复杂命令改用 `--base64-chunks`，移除旧 `--base64` 参数。bootstrap 提供 Python 示例，每 72 字节独立编码，末尾附原始 UTF-8 字节 SHA-256 的前 16 个十六进制字符。
+- 短段和摘要通过一次 RDC 启动调用传入。适配器校验摘要后才提交 Core。
+
 ## v0.4.0 — 2026-10-31
 
 配套 STB v0.18.0。不兼容删除旧 stdio/input 及能力协商输出；Adapter 新进程直接使用新代码，Core instructions 需重启 Bridge 后加载，MCP 工具需重连刷新。真实 ChatGPT/RDC 新版业务全链路尚未重新验收。

@@ -32,7 +32,7 @@ socket 与 tmux 的命令只维护在 [Core 测试说明](../../../shared-termin
 
 ```sh
 stb-rdc run TEST_SESSION --text 'printf STB_RDC_REGRESSION_OK'
-stb-rdc run TEST_SESSION --base64 PAYLOAD
+stb-rdc run TEST_SESSION --base64-chunks CHUNK1 ... DIGEST16
 ```
 
 PAYLOAD 为编码工具对同一条命令按 UTF-8 编码并解码回验的实际结果；不折行、不添加换行、不手算。两种模式均通过 RDC start_process(timeout_ms=1) 启动即提交，按原 PID 读取结果，不使用 interact_with_process。测试会话须隔离，非生产 pane。

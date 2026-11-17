@@ -1,10 +1,10 @@
 # 快速上手
 
-何时用 Base64：命令超过 200 个 Unicode 字符，或包含单引号、双引号、反斜杠、反引号、`$` 中任一字符时，用工具编码后传 `--base64 PAYLOAD`；其余短且简单的单行文本用 `--text`。字数按原文计算，不计 CLI 外层引用。run 的帮助和 bootstrap 均返回同一选择规则。
+何时用 Base64：命令超过 200 个 Unicode 字符，或包含单引号、双引号、反斜杠、反引号、`$` 中任一字符时，用工具编码后传 `--base64-chunks CHUNK1 ... DIGEST16`；其余短且简单的单行文本用 `--text`。字数按原文计算，不计 CLI 外层引用。run 的帮助和 bootstrap 均返回同一选择规则。
 
 目标设备需有 Python、运行中的 STB Core 和 PATH 可见的 stb-rdc，ChatGPT 已连接 RDC。bootstrap 正常返回即发现完成；说明缺失或 API 故障直接报错，不协商旧接口版本。
 
-简单命令用 `stb-rdc run SESSION --text 'df -h /'`；复杂命令用工具按 UTF-8 编码并回验后调用 `stb-rdc run SESSION --base64 PAYLOAD`。不手算、不添加首尾换行，仅单行。启动即提交，不使用 stdin。RDC 启动 timeout_ms=1，结果未收齐读取原 PID，不重提。
+简单命令用 `stb-rdc run SESSION --text 'df -h /'`；复杂命令用工具按 bootstrap 生成 Base64 分段与摘要后调用 `stb-rdc run SESSION --base64-chunks CHUNK1 ... DIGEST16`。不手算、不添加首尾换行，仅单行。启动即提交，不使用 stdin。RDC 启动 timeout_ms=1，结果未收齐读取原 PID，不重提。
 
 Bootstrap 一次返回上下文、调用规则和命令模板，默认流程为：
 

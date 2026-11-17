@@ -8,7 +8,7 @@ from typing import Any, Sequence
 from .client import BridgeClient, BridgeError
 from .policy import bootstrap, compact_terminal, INPUT_SELECTION
 from .model_view import model_view
-from .command_input import decode_command, validate_command
+from .command_input import decode_chunks, validate_command
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -22,12 +22,13 @@ def build_parser() -> argparse.ArgumentParser:
     commands.add_parser("list", help="列出托管会话")
     info_parser = commands.add_parser("info", help="查看指定会话状态和当前任务")
     info_parser.add_argument("session")
-    run_parser = commands.add_parser("run", help="执行任务并观察结果",
+    run_parser = commands.add_parser("run", allow_abbrev=False, help="执行任务并观察结果",
         description=INPUT_SELECTION + " 默认观察 60 秒，超时不停止任务；工具编码步骤见 bootstrap。")
     run_parser.add_argument("session")
     source = run_parser.add_mutually_exclusive_group(required=True)
     source.add_argument("--text", help="单行命令；需要启动 Shell 正确引用")
-    source.add_argument("--base64", metavar="PAYLOAD", help="UTF-8 原文的标准 Base64；用工具生成并回验，不折行")
+    source.add_argument("--base64-chunks", nargs="+", metavar="CHUNK_OR_DIGEST",
+                        help="空格分隔的 Base64 短段，最后一个参数为 16 位摘要")
     run_parser.add_argument("--wait-ms", type=int, default=60000)
     run_parser.add_argument("--expected-duration-ms", type=int, default=10000)
     run_parser.add_argument("--resource-class", choices=("normal", "high_io", "full_scan"), default="normal")
@@ -58,7 +59,10 @@ def build_parser() -> argparse.ArgumentParser:
 
 def dispatch(args: argparse.Namespace, client: BridgeClient) -> dict[str, Any]:
     if args.command == "run":
-        text = decode_command(args.base64) if args.base64 is not None else validate_command(args.text)
+        if args.base64_chunks is not None:
+            text = decode_chunks(args.base64_chunks)
+        else:
+            text = validate_command(args.text)
         pane = client.session(args.session)["pane"]
         params = dict(pane=pane, text=text, wait_ms=args.wait_ms,
                       expected_duration_ms=args.expected_duration_ms, resource_class=args.resource_class)

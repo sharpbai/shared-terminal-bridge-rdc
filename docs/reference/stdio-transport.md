@@ -6,15 +6,35 @@
 
 等待模板：`stb-rdc wait JOB_ID --seconds 60`。`--seconds` 可设 1–600 秒，默认 60，状态变化时可能提前返回；这是 Core 观察窗口，不是 RDC 的 timeout_ms，超时不会停止目标任务。
 
-`run` 二选一：`--text TEXT` 或 `--base64 PAYLOAD`。
+`run` 二选一：`--text TEXT` 或 `--base64-chunks CHUNK1 ... DIGEST16`。
 input 命令已移除；Agent 仅运行非交互 CLI 任务，优先 CLI 参数，不自动操作 TUI 或回复运行程序。
 已删除 stdio/stdin 输入参数，不保留兼容模式。
 
-命令不超过 200 个 Unicode 字符，且不含单引号、双引号、反斜杠、反引号或美元符时优先 --text；其他情况用 --base64。编码前先核对可执行单行内容，不猜测修复终端复制的折行。
+命令不超过 200 个 Unicode 字符，且不含单引号、双引号、反斜杠、反引号或美元符时优先 --text；其他情况用 --base64-chunks。编码前先核对可执行单行内容，不猜测修复终端复制的折行。
 
 Base64 由 ChatGPT 当前可用的代码执行工具生成：UTF-8 → 标准 Base64，无折行、不添加首尾换行，随后解码与原始字节比较。禁止模型手算、改写编码结果；无工具时明确报告。不通过 RDC 先传原文编码，以免把转义问题前移。该工具仅处理文本，不执行目标命令，不改变风险确认要求。
 
 CLI 严格检查标准 Base64 和 UTF-8，然后按原文校验：非空、单行、无 ASCII 控制字符，最多 65536 UTF-8 字节。多行或尾随换行报错，不自动截断、去空格或拆分。Base64 不是加密，体积约增三分之一；不承诺启动参数或目标终端支持任意长度输入。
+
+
+## Base64 短段拼接
+
+`stb-rdc run SESSION --base64-chunks CHUNK1 CHUNK2 ... DIGEST16`。将原文按 UTF-8 编码，每 72 字节独立做标准 Base64（每段最多 96 字符），末尾附原始字节 SHA-256 的前 16 个小写十六进制字符。每个数组元素作为独立参数，用空格分隔。接收端逐段严格解码，拼接字节并在提交 Core 前核验摘要，再校验 UTF-8、长度和单行约束。
+
+ChatGPT 用会话 Python 工具生成数组，替换示例命令时保持原文为单行：
+
+```python
+import base64, hashlib, json
+
+text = "printf '%s\\n' 'A read-only example for demonstrating short Base64 segments'"
+data = text.encode("utf-8")
+parts = [base64.b64encode(data[i:i+72]).decode("ascii")
+         for i in range(0, len(data), 72)]
+print(json.dumps(parts + [hashlib.sha256(data).hexdigest()[:16]]))
+```
+
+原样取出数组元素，按顺序用空格接在 `stb-rdc run SESSION --base64-chunks` 后。调用一次 RDC `start_process`，设置 `timeout_ms=1`。摘要或格式错误时报告原始错误，不修补或自动重提。
+
 
 ## RDC 完整调用路径
 
@@ -32,11 +52,11 @@ workflow 示例统一采用 `{"tool": "start_process", "arguments": {"command": 
 ```text
 start_process(command="stb-rdc run SESSION --text 'df -h /'", timeout_ms=1)
 或
-start_process(command="stb-rdc run SESSION --base64 PAYLOAD", timeout_ms=1)
+start_process(command="stb-rdc run SESSION --base64-chunks CHUNK1 CHUNK2 ... DIGEST16", timeout_ms=1)
 → 输出未收齐：read_process_output(pid=返回的 PID, offset=0, timeout_ms=3000)
 ```
 
-PAYLOAD 替换为编码工具真实输出。每次 CLI 处理一次请求、输出结果后退出；后续操作使用新进程，不复用旧 PID 提交请求。PID 是 RDC 进程，job_id 是 STB 任务，不能混用。尚未返回 job_id 时继续收集原 PID，不重提 run。结果不明确或调用报错按真实证据处理，不自动重试。
+分段和摘要替换为编码工具输出的数组元素。每次 CLI 处理一次请求、输出结果后退出；后续操作使用新进程，不复用旧 PID 提交请求。PID 是 RDC 进程，job_id 是 STB 任务，不能混用。尚未返回 job_id 时继续收集原 PID，不重提 run。结果不明确或调用报错按真实证据处理，不自动重试。
 
 ## Bootstrap 输出
 

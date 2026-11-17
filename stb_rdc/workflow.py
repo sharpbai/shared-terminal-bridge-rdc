@@ -17,15 +17,23 @@ def rdc_workflow(name: str) -> dict:
             "first": "未知会话名先 list，已知名称直接 bootstrap SESSION。本次 bootstrap 已包含终端画面，确认实际环境后执行，不重复 help/bootstrap/context。",
             "refresh": {"when": "人工操作、换机或画面不明时刷新；结果完整时不额外读取", **start_call(f"stb-rdc context {session}")},
         },
-        "choose_input": "按 transport.input_selection 选择 --text 或 --base64；两者仅是本地命令传输方式，最终都执行一次 Core run。只提交非交互 CLI 任务，优先程序的非交互参数；仅单行。遇到交互提示或 TUI 请人工操作，不通过新 run 发送回复或按键。",
+        "choose_input": "按 transport.input_selection 选择 --text 或 --base64-chunks；两者仅是本地命令传输方式，最终都执行一次 Core run。只提交非交互 CLI 任务，优先程序的非交互参数；仅单行。遇到交互提示或 TUI 请人工操作，不通过新 run 发送回复或按键。",
         "run_text": {
             "call": start_call(f"stb-rdc run {session} --text 'df -h /'"),
             "then": "命令已提交，不再向 stdin 输入，不调用 interact_with_process。先使用启动返回的输出；结果未收齐按 collect 读取该 PID。外层 Shell 参数仍须正确引用。",
         },
         "run_base64": {
-            "encode": "调用 ChatGPT 当前可用的代码执行工具，仅做文本编码，不执行目标命令。将核对的单行命令按 UTF-8 编成标准 Base64，解码与原始字节比较；不折行、不添加首尾换行。禁止手算；工具不可用时报告。",
-            "call": start_call(f"stb-rdc run {session} --base64 PAYLOAD"),
-            "then": "用编码工具输出原样替换 PAYLOAD，启动即提交；不调用 interact_with_process，不发送 stdin，按 collect 收集。",
+            "encode": "调用 ChatGPT 当前可用的代码执行工具，仅做文本编码，不执行目标命令。将核对的单行命令按下方脚本生成分段和摘要数组。不添加首尾换行。禁止手算；工具不可用时报告。",
+            "python_example": (
+                'import base64, hashlib, json\n'
+                'text = "printf \'%s\\\\n\' \'A read-only example for demonstrating short Base64 segments\'"  # 替换为已核对的单行命令\n'
+                'data = text.encode("utf-8")\n'
+                'parts = [base64.b64encode(data[i:i+72]).decode("ascii")\n'
+                '         for i in range(0, len(data), 72)]\n'
+                'print(json.dumps(parts + [hashlib.sha256(data).hexdigest()[:16]]))\n'
+            ),
+            "call": start_call(f"stb-rdc run {session} --base64-chunks CHUNK1 CHUNK2 ... DIGEST16"),
+            "then": "把 Python 输出数组的原始元素按顺序用空格连接，每个元素是一个独立参数，最后一个是摘要。只调用一次 start_process，timeout_ms=1。不要传整个 JSON 数组，不改写、修补或自动重试。输出未收齐按 collect 读取原 PID。",
         },
         "collect": {
             "call": {"tool": "read_process_output", "arguments": {"pid": 12345, "offset": 0, "timeout_ms": 3000}},

@@ -1,15 +1,22 @@
 """Direct and encoded input converge into one Core call."""
 import base64
+import hashlib
 import contextlib
 import io
 import unittest
 from stb_rdc.cli import run
 from tests.fakes import RunClient
 
+def encoded_chunks(text):
+    raw = text.encode()
+    return [base64.b64encode(raw[i:i+72]).decode()
+            for i in range(0, len(raw), 72)] + [hashlib.sha256(raw).hexdigest()[:16]]
+
+
 class CliRunTest(unittest.TestCase):
     def test_direct_and_base64_are_identical(self):
         for text in [r"""printf '%s\n' "$HOME" '中文'""", "echo " + "x" * 40000]:
-            for options in (["--text", text], ["--base64", base64.b64encode(text.encode()).decode()]):
+            for options in (["--text", text], ["--base64-chunks", *encoded_chunks(text)]):
                 client = RunClient()
                 self.assertEqual(run(["run", "verify33", *options, "--wait-ms", "1"], client)["job_id"], "job-one")
                 self.assertEqual([m for m, _ in client.calls], ["terminal_session_resolve", "terminal_run"])
@@ -19,7 +26,7 @@ class CliRunTest(unittest.TestCase):
     def test_invalid_encoding_never_contacts_core(self):
         client = RunClient()
         with self.assertRaises(RuntimeError):
-            run(["run", "verify33", "--base64", "!!"], client)
+            run(["run", "verify33", "--base64-chunks", "!!"], client)
         self.assertEqual(client.calls, [])
 
     def test_removed_stdio_and_exclusive_inputs(self):
